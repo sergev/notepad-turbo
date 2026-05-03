@@ -19,6 +19,7 @@
 #define Uses_TEditor
 #define Uses_TFileEditor
 #define Uses_TEditWindow
+#define Uses_TPalette
 #include <tvision/tv.h>
 
 #include <memory>
@@ -38,6 +39,8 @@ public:
 
     void handleEvent(TEvent &event) override;
     void idle() override;
+
+    TPalette &getPalette() const override;
 
     static TMenuBar    *initMenuBar(TRect r);
     static TStatusLine *initStatusLine(TRect r);

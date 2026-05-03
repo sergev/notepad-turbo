@@ -19,6 +19,7 @@
 #define Uses_TFileDialog
 #define Uses_MsgBox
 #define Uses_TObject
+#define Uses_TPalette
 #include <tvision/tv.h>
 
 #include "NNApplication.h"
@@ -38,6 +39,7 @@
 
 #include <filesystem>
 #include <cstdlib>
+#include <memory>
 
 namespace {
 
@@ -263,6 +265,167 @@ TMenuBar *NNApplication::initMenuBar(TRect r)
 TStatusLine *NNApplication::initStatusLine(TRect r)
 {
     return createNNStatusLine(r);
+}
+
+TPalette &NNApplication::getPalette() const
+{
+    static const char appPalette[] = {
+        // TBackground.
+        0x71, // 1: fill pattern
+
+        // Shared menu bar, menu box, status line, and indicator colors.
+        0x70, // 2: normal text / first indicator color
+        0x78, // 3: disabled text / second indicator color
+        0x74, // 4: shortcut text
+        0x20, // 5: normal selection
+        0x28, // 6: disabled selection
+        0x24, // 7: shortcut selection
+
+        // Blue TWindow.
+        0x17, // 8: frame passive
+        0x1F, // 9: frame active
+        0x1A, // 10: frame icons
+        0x31, // 11: scroll bar page
+        0x31, // 12: scroll bar controls
+        0x1E, // 13: scroller normal / static text default
+        0x71, // 14: scroller selected
+        0x1F, // 15: reserved
+
+        // Cyan TWindow.
+        0x37, // 16: frame passive
+        0x3F, // 17: frame active
+        0x3A, // 18: frame icons
+        0x13, // 19: scroll bar page
+        0x13, // 20: scroll bar controls
+        0x3E, // 21: scroller normal
+        0x21, // 22: scroller selected
+        0x3F, // 23: reserved
+
+        // Gray TWindow.
+        0x70, // 24: frame passive
+        0x7F, // 25: frame active
+        0x7A, // 26: frame icons
+        0x13, // 27: scroll bar page
+        0x13, // 28: scroll bar controls
+        0x70, // 29: scroller normal
+        0x7F, // 30: scroller selected
+        0x7E, // 31: reserved
+
+        // Gray TDialog.
+        0x70, // 32: frame passive
+        0x7F, // 33: frame active
+        0x7A, // 34: frame icon
+        0x13, // 35: scroll bar page
+        0x13, // 36: scroll bar controls
+        0x70, // 37: static text
+        0x70, // 38: label normal
+        0x7F, // 39: label selected
+        0x7E, // 40: label shortcut
+        0x20, // 41: button normal
+        0x2B, // 42: button default
+        0x2F, // 43: button selected
+        0x78, // 44: button disabled
+        0x2E, // 45: button shortcut
+        0x70, // 46: button shadow
+        0x30, // 47: cluster normal
+        0x3F, // 48: cluster selected
+        0x3E, // 49: cluster shortcut
+        0x1F, // 50: input line normal
+        0x2F, // 51: input line selected
+        0x1A, // 52: input line arrows
+        0x20, // 53: history arrow
+        0x72, // 54: history sides
+        0x31, // 55: history window scroll page
+        0x31, // 56: history window scroll controls
+        0x30, // 57: list viewer normal
+        0x2F, // 58: list viewer focused
+        0x3E, // 59: list viewer selected
+        0x31, // 60: list viewer divider
+        0x13, // 61: file info pane
+        0x38, // 62: cluster disabled
+        0x00, // 63: reserved
+
+        // Blue TDialog.
+        0x17, // 64: frame passive
+        0x1F, // 65: frame active
+        0x1A, // 66: frame icon
+        0x71, // 67: scroll bar page
+        0x71, // 68: scroll bar controls
+        0x1E, // 69: static text
+        0x17, // 70: label normal
+        0x1F, // 71: label selected
+        0x1E, // 72: label shortcut
+        0x20, // 73: button normal
+        0x2B, // 74: button default
+        0x2F, // 75: button selected
+        0x78, // 76: button disabled
+        0x2E, // 77: button shortcut
+        0x10, // 78: button shadow
+        0x30, // 79: cluster normal
+        0x3F, // 80: cluster selected
+        0x3E, // 81: cluster shortcut
+        0x70, // 82: input line normal
+        0x2F, // 83: input line selected
+        0x7A, // 84: input line arrows
+        0x20, // 85: history arrow
+        0x12, // 86: history sides
+        0x31, // 87: history window scroll page
+        0x31, // 88: history window scroll controls
+        0x30, // 89: list viewer normal
+        0x2F, // 90: list viewer focused
+        0x3E, // 91: list viewer selected
+        0x31, // 92: list viewer divider
+        0x13, // 93: file info pane
+        0x38, // 94: cluster disabled
+        0x00, // 95: reserved
+
+        // Cyan TDialog.
+        0x37, // 96: frame passive
+        0x3F, // 97: frame active
+        0x3A, // 98: frame icon
+        0x13, // 99: scroll bar page
+        0x13, // 100: scroll bar controls
+        0x3E, // 101: static text
+        0x30, // 102: label normal
+        0x3F, // 103: label selected
+        0x3E, // 104: label shortcut
+        0x20, // 105: button normal
+        0x2B, // 106: button default
+        0x2F, // 107: button selected
+        0x78, // 108: button disabled
+        0x2E, // 109: button shortcut
+        0x30, // 110: button shadow
+        0x70, // 111: cluster normal
+        0x7F, // 112: cluster selected
+        0x7E, // 113: cluster shortcut
+        0x1F, // 114: input line normal
+        0x2F, // 115: input line selected
+        0x1A, // 116: input line arrows
+        0x20, // 117: history arrow
+        0x32, // 118: history sides
+        0x31, // 119: history window scroll page
+        0x71, // 120: history window scroll controls
+        0x70, // 121: list viewer normal
+        0x2F, // 122: list viewer focused
+        0x7E, // 123: list viewer selected
+        0x71, // 124: list viewer divider
+        0x13, // 125: file info pane
+        0x78, // 126: cluster disabled
+        0x00, // 127: reserved
+
+        // THelpWindow.
+        0x37, // 128: frame passive
+        0x3F, // 129: frame active
+        0x3A, // 130: frame icon
+        0x13, // 131: scroll bar page
+        0x13, // 132: scroll bar controls
+        0x30, // 133: help viewer normal text
+        0x3E, // 134: help viewer keyword
+        0x1E, // 135: help viewer selected keyword
+    };
+
+    static TPalette palette( appPalette, sizeof(appPalette) );
+    return palette;
 }
 
 NNWindow *NNApplication::openEditorWindow(const std::string &path)
