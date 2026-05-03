@@ -28,6 +28,7 @@ FetchContent_Declare(
     tvision
     GIT_REPOSITORY https://github.com/magiblot/tvision.git
     GIT_TAG 6141d9e1a434bb0283c8d434f8988589e7c3dead
+    EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(tvision)
 

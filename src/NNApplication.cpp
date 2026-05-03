@@ -150,7 +150,7 @@ NNApplication::NNApplication(int argc, char **argv)
     disableCommands(ts);
 
     // Initialize settings
-    std::string configDir = IniSettings::defaultConfigDir("NotepadNextTUI");
+    std::string configDir = IniSettings::defaultConfigDir("notepad-turbo");
     settings = std::make_unique<IniSettings>(configDir + "/settings.ini");
     settings->load();
 

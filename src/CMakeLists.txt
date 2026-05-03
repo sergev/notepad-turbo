@@ -1,4 +1,4 @@
-add_executable(NotepadNextTUI
+add_executable(nt
     main.cpp
 
     # Application
@@ -46,7 +46,7 @@ add_executable(NotepadNextTUI
     dialogs/NNMacroSaveDialog.h dialogs/NNMacroSaveDialog.cpp
 )
 
-target_include_directories(NotepadNextTUI
+target_include_directories(nt
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/dialogs
@@ -55,7 +55,7 @@ target_include_directories(NotepadNextTUI
         ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/access
 )
 
-target_link_libraries(NotepadNextTUI
+target_link_libraries(nt
     PRIVATE
         tvision::tvision
         lexilla
@@ -63,13 +63,17 @@ target_link_libraries(NotepadNextTUI
         uchardet
 )
 
-target_compile_definitions(NotepadNextTUI
+target_compile_definitions(nt
     PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
         APP_COPYRIGHT="${APP_COPYRIGHT}"
 )
 
+install(TARGETS nt
+    DESTINATION bin
+)
+
 # Install language scripts alongside the binary
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts/
-    DESTINATION share/NotepadNextTUI/scripts
+    DESTINATION share/notepad-turbo/scripts
 )
