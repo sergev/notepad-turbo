@@ -9,6 +9,7 @@ project(NotepadNext
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+add_compile_options(-Wall -Werror)
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 set(APP_COPYRIGHT "Copyright 2019-${CURRENT_YEAR} Justin Dailey")

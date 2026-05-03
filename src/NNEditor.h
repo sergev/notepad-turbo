@@ -86,7 +86,6 @@ private:
     MacroRecorder *recorder = nullptr;
 
     std::array<StyleEntry, 256> styleMap{};
-    TColorAttr defaultAttr{};
 
     bool lexDirty = true;
 

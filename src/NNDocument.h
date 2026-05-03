@@ -23,6 +23,7 @@ class NNEditor;
 class NNDocument : public Scintilla::IDocument {
 public:
     explicit NNDocument(NNEditor *editor);
+    virtual ~NNDocument() = default;
 
     // --- IDocument implementation ---
     int SCI_METHOD Version() const noexcept override;
