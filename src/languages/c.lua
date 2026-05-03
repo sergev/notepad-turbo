@@ -17,7 +17,7 @@ L.keywords = {
 L.styles = {
 	["PREPROCESSOR"] = {
 		id = 9,
-		fgColor = rgb(0x804000),
+		fgColor = rgb(0x00ff00),
 		bgColor = rgb(0x000000),
 	},
 	["DEFAULT"] = {
@@ -27,23 +27,23 @@ L.styles = {
 	},
 	["INSTRUCTION WORD"] = {
 		id = 5,
-		fgColor = rgb(0x0000FF),
+		fgColor = rgb(0x808000),
 		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["TYPE WORD"] = {
 		id = 16,
-		fgColor = rgb(0x8000FF),
+		fgColor = rgb(0xa0a000),
 		bgColor = rgb(0x000000),
 	},
 	["NUMBER"] = {
 		id = 4,
-		fgColor = rgb(0xFF8000),
+		fgColor = rgb(0x00ffff),
 		bgColor = rgb(0x000000),
 	},
 	["STRING"] = {
 		id = 6,
-		fgColor = rgb(0xa0a0a0),
+		fgColor = rgb(0x800080),
 		bgColor = rgb(0x000000),
 	},
 	["CHARACTER"] = {
@@ -53,7 +53,7 @@ L.styles = {
 	},
 	["OPERATOR"] = {
 		id = 10,
-		fgColor = rgb(0x000080),
+		fgColor = rgb(0x008080),
 		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
