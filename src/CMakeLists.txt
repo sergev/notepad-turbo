@@ -73,7 +73,10 @@ install(TARGETS nt
     DESTINATION bin
 )
 
-# Install language scripts alongside the binary
+# Install Lua init + language definitions (LuaState loads languages/*.lua next to init.lua)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts/
     DESTINATION share/notepad-turbo/scripts
+)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/languages/
+    DESTINATION share/notepad-turbo/scripts/languages
 )
