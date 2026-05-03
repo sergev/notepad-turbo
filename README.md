@@ -1,70 +1,58 @@
-# Notepad Next
+# Notepad Turbo
 
-![Build Notepad Next](https://github.com/dail8859/NotepadNext/workflows/Build%20Notepad%20Next/badge.svg)
+A **terminal (TUI) text editor** in the spirit of Notepad++, built with **[Turbo Vision](https://github.com/magiblot/tvision)**. This project grows out of **[NotepadNext](https://github.com/dail8859/NotepadNext)**—Justin Dailey’s cross-platform reimplementation of Notepad++—which used a **Qt 6** GUI.
 
-A cross-platform, reimplementation of Notepad++.
+The application presents itself in-app as **Notepad Turbo** and is implemented as a Turbo Vision `TApplication` with Lexilla-powered highlighting and Lua-driven language definitions.
 
-Though the application overall is stable and usable, it should not be considered safe for critically important work.
+## Features
 
-There are numerous bugs and half working implementations. Pull requests are greatly appreciated.
+- **Multi-document UI**: tile, cascade, next/previous window (see menus in [`src/NNMenus.cpp`](src/NNMenus.cpp)).
+- **File**: new, open (F3), save (F2), save as, close, close all, exit.
+- **Edit**: undo, cut, copy, paste, delete, select all.
+- **Search**: find (Ctrl+F), replace (Ctrl+H), find next/prev (F4 / Shift+F4), go to line (Ctrl+G).
+- **View**: word wrap, whitespace visibility.
+- **Tools**: preferences; record / stop / run / save macros.
+- **Syntax highlighting**: Lexilla lexers with styling driven from Lua (see [`src/NNEditor.h`](src/NNEditor.h), [`src/languages/*.lua`](src/languages)).
+- **Persistence**: settings, recent files, and session restore (INI-style; see application code under [`src/`](src)).
 
-![screenshot](/doc/screenshot.png)
+## Requirements
 
-# Installation
+- **CMake** ≥ 3.21
+- **C++20** toolchain
+- **Git** (Turbo Vision is fetched at configure time via `FetchContent`)
+- Third-party code built in-tree: **Lua**, **Lexilla**, **uchardet**; Scintilla **headers** only (for Lexilla interfaces)
 
-Packages are available for Windows, Linux, and MacOS.
+## Build
 
-Below are the supported distribution mechanisms. There may be other ways to download/install the application, but this project will likely not be able to offer any support for those since they are made available by other individuals.
-
-## Windows
-Windows packages are available as an installer or a stand-alone zip file on the [release](https://github.com/dail8859/NotepadNext/releases) page. The installer provides additional components such as an auto-updater and Windows context menu integration. You can easily install it with Winget:
-
-```powershell
-winget install dail8859.NotepadNext
-```
-
-## Linux
-Linux packages can be obtained by downloading the stand-alone AppImage on the [release](https://github.com/dail8859/NotepadNext/releases) page or by installing the [flatpak](https://flathub.org/apps/details/com.github.dail8859.NotepadNext) by executing:
-
-```bash
-flatpak install flathub com.github.dail8859.NotepadNext
-```
-
-If you are using Ubuntu and prefer an up-to-date deb version, you can use the [PPA supporting Ubuntu 22.04 and newer](https://launchpad.net/~quentiumyt/+archive/ubuntu/notepadnext) provided by
-[Quentin Lienhardt](https://github.com/QuentiumYT). You can add it by executing:
+Using the top-level Makefile (creates `build/`, **RelWithDebInfo**):
 
 ```bash
-sudo add-apt-repository ppa:quentiumyt/notepadnext
-sudo apt update
-sudo apt install notepadnext
+make
 ```
 
-## MacOS
-MacOS disk images can be downloaded from the [release](https://github.com/dail8859/NotepadNext/releases) page.
+The main executable target is **`nt`** ([`src/CMakeLists.txt`](src/CMakeLists.txt)).
 
-It can also be installed using brew:
-```bash
-brew tap dail8859/notepadnext
-brew install notepadnext
-```
-
-#### MacOS Tweaks
-
-By default, MacOS enables font smoothing which causes text to appear quite differently from the Windows version. This can be disabled system-wide using the following command:
+Install (after a successful build):
 
 ```bash
-defaults -currentHost write -g AppleFontSmoothing -int 0
+make install
 ```
 
-A restart is required for this to take effect.
+## Running
 
-# Development
-Current development is done using QtCreator with the Microsoft Visual C++ (msvc) compiler. Qt 6.5 is the currently supported Qt version. Older versions of Qt are likely to work but are not tested. Any fixes for older versions will be accepted as long as they do not introduce complex fixes. This application is also known to build successfully on various Linux distributions and macOS. Other platforms/compilers should be usable with minor modifications.
+Run the built binary (typical path `build/nt`):
 
-If you are familiar with building C++ Qt desktop applications with Qt Creator, then this should be as simple as opening `CMakeLists` and build/run the project.
+```bash
+./build/nt
+```
 
-If you are new to building C++ Qt desktop applications, there is a more detailed guide [here](/doc/Building.md).
+Adjust paths if your build output or working directory differs.
 
+## License
 
-# License
-This code is released under the [GNU General Public License version 3](https://www.gnu.org/licenses/gpl-3.0.txt).
+This project is released under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.txt) (see [`LICENSE`](LICENSE)). Third-party components under [`thirdparty/`](thirdparty) retain their own licenses (e.g. Lexilla, Scintilla headers, Lua, uchardet).
+
+## Third-party / upstream
+
+- **[Turbo Vision](https://github.com/magiblot/tvision)** — TUI framework (fetched by CMake; not vendored in-tree).
+- **[NotepadNext](https://github.com/dail8859/NotepadNext)** — original Qt-based editor and shared lineage; **thanks again to Justin Dailey**.

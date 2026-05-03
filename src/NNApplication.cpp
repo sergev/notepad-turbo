@@ -38,6 +38,56 @@
 #include <filesystem>
 #include <cstdlib>
 
+namespace {
+
+namespace fs = std::filesystem;
+
+// Pick a Lua scripts root under an install or data prefix (e.g. .../share/notepad-turbo).
+// CMake installs init.lua under PREFIX/share/notepad-turbo/scripts/.
+static fs::path scriptsRootFromBase(const fs::path &base)
+{
+    if (!fs::exists(base) || !fs::is_directory(base))
+        return {};
+
+    const fs::path scriptsSub = base / "scripts";
+    if (fs::is_directory(scriptsSub) && fs::exists(scriptsSub / "init.lua"))
+        return scriptsSub;
+
+    if (fs::exists(base / "init.lua"))
+        return base;
+
+    return {};
+}
+
+static std::string resolveDefaultScriptsDir()
+{
+    // Development: cwd-relative scripts/ with init.lua
+    {
+        const fs::path dev = "scripts";
+        if (fs::is_directory(dev) && fs::exists(dev / "init.lua"))
+            return dev.string();
+    }
+
+    if (const char *home = std::getenv("HOME")) {
+        const fs::path p = scriptsRootFromBase(fs::path(home) / ".local" / "share" / "notepad-turbo");
+        if (!p.empty())
+            return p.string();
+    }
+
+    for (const char *base : {
+             "/usr/local/share/notepad-turbo",
+             "/opt/local/share/notepad-turbo",
+         }) {
+        const fs::path p = scriptsRootFromBase(fs::path(base));
+        if (!p.empty())
+            return p.string();
+    }
+
+    return "scripts";
+}
+
+} // namespace
+
 // Helper: run a dialog on the desktop
 static ushort runDialog(TDialog *d, void *data = nullptr)
 {
@@ -181,15 +231,12 @@ void NNApplication::initLua()
 {
     lua = std::make_unique<LuaState>();
 
-    // Determine scripts path: try binary directory, then install path
     std::string scriptDir;
     const char *scriptEnv = getenv("NN_SCRIPTS_DIR");
     if (scriptEnv)
         scriptDir = scriptEnv;
-    else {
-        // Default: scripts/ relative to binary
-        scriptDir = "scripts";
-    }
+    else
+        scriptDir = resolveDefaultScriptsDir();
 
     lua->setScriptsDir(scriptDir);
     lua->executeInitScript();
