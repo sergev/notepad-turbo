@@ -1,0 +1,46 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/newfile.png</file>
+        <file>icons/saved.png</file>
+        <file>icons/unsaved.png</file>
+        <file>icons/openFile.png</file>
+        <file>icons/saveAll.png</file>
+        <file>icons/closeAll.png</file>
+        <file>icons/closeFile.png</file>
+        <file>icons/copy.png</file>
+        <file>icons/cut.png</file>
+        <file>icons/paste.png</file>
+        <file>icons/redo.png</file>
+        <file>icons/undo.png</file>
+        <file>icons/zoomIn.png</file>
+        <file>icons/zoomOut.png</file>
+        <file>icons/indentGuide.png</file>
+        <file>icons/invisibleChar.png</file>
+        <file>icons/wrap.png</file>
+        <file>icons/find.png</file>
+        <file>stylesheets/npp.css</file>
+        <file>icons/findReplace.png</file>
+        <file>icons/readonly.png</file>
+        <file>icons/startRecord.png</file>
+        <file>icons/stopRecord.png</file>
+        <file>icons/playRecord.png</file>
+        <file>icons/playRecord_m.png</file>
+        <file>icons/saveRecord.png</file>
+        <file>icons/text_indent.png</file>
+        <file>icons/text_indent_remove.png</file>
+        <file>icons/arrow_refresh.png</file>
+        <file>icons/bin_closed.png</file>
+        <file>icons/printer.png</file>
+        <file>icons/NotepadNext.png</file>
+        <file>icons/cog.png</file>
+        <file>icons/table_delete.png</file>
+        <file>icons/table_row_delete.png</file>
+        <file>icons/table_row_insert.png</file>
+        <file>icons/arrow_down.png</file>
+        <file>icons/arrow_up.png</file>
+        <file>icons/table_edit.png</file>
+        <file>icons/application_osx_terminal.png</file>
+        <file>icons/folder_go.png</file>
+        <file>icons/wrapindicator.png</file>
+    </qresource>
+</RCC>
