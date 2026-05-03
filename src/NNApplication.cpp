@@ -288,8 +288,8 @@ TPalette &NNApplication::getPalette() const
         0x0A, // 10: frame icons
         0x30, // 11: scroll bar page
         0x30, // 12: scroll bar controls
-        0x0E, // 13: scroller normal / static text default
-        0x70, // 14: scroller selected
+        0x07, // 13: scroller normal / static text default
+        0x17, // 14: scroller selected
         0x0F, // 15: reserved
 
         // Cyan TWindow.
