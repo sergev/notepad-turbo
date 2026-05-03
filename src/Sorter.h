@@ -6,20 +6,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
-#include <QList>
-#include <QByteArray>
+#include <vector>
+#include <string_view>
 
 class Sorter
 {
@@ -32,7 +24,7 @@ public:
     explicit Sorter(Direction direction) : direction(direction) {}
     virtual ~Sorter() = default;
 
-    virtual void sort(QVector<QByteArrayView> &lines) const = 0;
+    virtual void sort(std::vector<std::string_view> &lines) const = 0;
 
 protected:
     Direction direction;
@@ -43,7 +35,7 @@ class CaseInsensitiveSorter : public Sorter
 {
 public:
     using Sorter::Sorter;
-    void sort(QVector<QByteArrayView> &lines) const override;
+    void sort(std::vector<std::string_view> &lines) const override;
 };
 
 
@@ -51,7 +43,7 @@ class CaseSensitiveSorter : public Sorter
 {
 public:
     using Sorter::Sorter;
-    void sort(QVector<QByteArrayView> &lines) const override;
+    void sort(std::vector<std::string_view> &lines) const override;
 };
 
 
@@ -59,7 +51,7 @@ class LineLengthSorter : public Sorter
 {
 public:
     using Sorter::Sorter;
-    void sort(QVector<QByteArrayView> &lines) const override;
+    void sort(std::vector<std::string_view> &lines) const override;
 };
 
 
@@ -67,6 +59,5 @@ class ReverseSorter : public Sorter
 {
 public:
     using Sorter::Sorter;
-    void sort(QVector<QByteArrayView> &lines) const override;
+    void sort(std::vector<std::string_view> &lines) const override;
 };
-

@@ -6,50 +6,36 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-#ifndef MACRO_H
-#define MACRO_H
+#pragma once
 
 #include "MacroStep.h"
+#include <vector>
+#include <string>
+
+class NNEditor;
 
 class Macro
 {
 public:
     Macro();
 
-    ~Macro();
+    void addStep(NNMacroCmd cmd, const std::string &text = {});
+    void addStep(NNMacroStep step);
 
-    void addMacroStep(Scintilla::Message message, Scintilla::uptr_t wParam, Scintilla::sptr_t lParam);
-    void addMacroStep(MacroStep step);
+    int size() const { return (int)steps.size(); }
 
-    int size() const { return steps.size(); }
+    void replay(NNEditor *editor, int n = 1) const;
+    void replayTillEndOfFile(NNEditor *editor) const;
 
-    void replay(ScintillaNext *editor, int n = 1) const;
-    void replayTillEndOfFile(ScintillaNext *editor) const;
+    const std::string &getName() const { return name; }
+    void setName(const std::string &value) { name = value; }
 
-    QString getName() const;
-    void setName(const QString &value);
-
-    QVector<MacroStep> &getSteps() { return steps; }
-
-    friend QDataStream &operator<<(QDataStream& stream, const Macro &Macro);
-    friend QDataStream &operator>>(QDataStream& stream, Macro &Macro);
+    std::vector<NNMacroStep> &getSteps() { return steps; }
+    const std::vector<NNMacroStep> &getSteps() const { return steps; }
 
 private:
-    QVector<MacroStep> steps;
-    QString name;
+    std::vector<NNMacroStep> steps;
+    std::string name;
 };
-Q_DECLARE_METATYPE(Macro)
-Q_DECLARE_METATYPE(Macro*)
-
-#endif // MACRO_H

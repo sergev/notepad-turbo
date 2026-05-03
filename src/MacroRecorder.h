@@ -6,43 +6,24 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
 
-#ifndef MACRORECORDER_H
-#define MACRORECORDER_H
-
-#include <QObject>
-
-#include "ScintillaNext.h"
 #include "Macro.h"
 
+class NNEditor;
 
-
-class MacroRecorder : public QObject
+class MacroRecorder
 {
-    Q_OBJECT
-
 public:
-    MacroRecorder(QObject *parent = nullptr);
+    MacroRecorder() = default;
 
-    void startRecording(ScintillaNext *editor);
+    void startRecording(NNEditor *editor);
     Macro *stopRecording();
-
-public slots:
-    void recordMacroStep(Scintilla::Message message, Scintilla::uptr_t wParam, Scintilla::sptr_t lParam);
+    void recordStep(NNMacroCmd cmd, const std::string &text = {});
 
 private:
-    ScintillaNext *editor = Q_NULLPTR;
-    Macro *macro = Q_NULLPTR;
+    NNEditor *editor = nullptr;
+    Macro *macro = nullptr;
 };
-
-#endif // MACRORECORDER_H

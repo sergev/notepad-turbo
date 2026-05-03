@@ -1,6 +1,6 @@
 /*
  * This file is part of Notepad Next.
- * Copyright 2022 Justin Dailey
+ * Copyright 2019 Justin Dailey
  *
  * Notepad Next is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,16 +10,13 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 class IniSettings;
 
-class SessionManager
-{
+class NNPreferencesDialog {
 public:
-    SessionManager() = default;
+    explicit NNPreferencesDialog(IniSettings *settings);
+    void run();
 
-    void loadSession(IniSettings &ini, std::vector<std::string> &outFiles);
-    void saveSession(IniSettings &ini, const std::vector<std::string> &openFiles);
+private:
+    IniSettings *settings;
 };

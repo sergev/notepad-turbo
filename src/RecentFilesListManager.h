@@ -6,43 +6,33 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
 
-#ifndef RECENTFILESLISTMANAGER_H
-#define RECENTFILESLISTMANAGER_H
+#include <string>
+#include <vector>
 
-#include <QObject>
-#include <QList>
+class IniSettings;
 
-class RecentFilesListManager : public QObject
-{
-    Q_OBJECT
-
+class RecentFilesListManager {
 public:
-    explicit RecentFilesListManager(QObject *parent = Q_NULLPTR);
+    static constexpr int MaxFiles = 15;
 
-    QString mostRecentFile() const;
-    QStringList fileList() const;
-    void setFileList(const QStringList &list);
+    explicit RecentFilesListManager(IniSettings *settings);
 
-    int count() const { return recentFiles.size(); }
+    void load();
+    void save() const;
 
-public slots:
-    void addFile(const QString &filePath);
-    void removeFile(const QString &filePath);
+    void addFile(const std::string &filePath);
+    void removeFile(const std::string &filePath);
     void clear();
 
-private:
-    QStringList recentFiles;
-};
+    std::string mostRecentFile() const;
+    const std::vector<std::string> &fileList() const { return recentFiles; }
+    int count() const { return (int)recentFiles.size(); }
 
-#endif // RECENTFILESLISTMANAGER_H
+private:
+    IniSettings *settings;
+    std::vector<std::string> recentFiles;
+};

@@ -6,135 +6,115 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "MacroManager.h"
-#include "ApplicationSettings.h"
-
-MacroManager::MacroManager(QObject *parent) :
-    QObject{parent}
-{
-    qInfo(Q_FUNC_INFO);
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    qRegisterMetaTypeStreamOperators<Macro>("Macro");
-#else
-    // HACK: For some reason this is required to make QVariant recognize it as a valid type
-    // see https://stackoverflow.com/q/70974383
-    QMetaType::fromType<Macro>().hasRegisteredDataStreamOperators();
-#endif
-
-    loadSettings();
-}
+#include "IniSettings.h"
+#include "NNEditor.h"
+#include <cstdio>
 
 MacroManager::~MacroManager()
 {
-    saveSettings();
+    for (Macro *m : macros) delete m;
+    if (!isCurrentMacroSaved) delete currentMacro;
 }
 
-void MacroManager::startRecording(ScintillaNext *editor)
+void MacroManager::startRecording(NNEditor *editor)
 {
-    qInfo(Q_FUNC_INFO);
-    Q_ASSERT(_isRecording == false);
+    if (_isRecording) return;
 
     _isRecording = true;
-
     recorder.startRecording(editor);
 
-    emit recordingStarted();
+    if (onRecordingStarted) onRecordingStarted();
 }
 
 void MacroManager::stopRecording()
 {
-    qInfo(Q_FUNC_INFO);
-    Q_ASSERT(_isRecording == true);
+    if (!_isRecording) return;
 
     _isRecording = false;
 
     Macro *m = recorder.stopRecording();
 
     if (m->size() == 0) {
-        // If there were no actions recorded, delete it
         delete m;
-    }
-    else {
-        if (isCurrentMacroSaved == false) {
-            // The previous current macro wasn't saved and we are getting ready to point to something else, delete it
+    } else {
+        if (!isCurrentMacroSaved) {
             delete currentMacro;
         }
-
         isCurrentMacroSaved = false;
         currentMacro = m;
     }
 
-    emit recordingStopped();
+    if (onRecordingStopped) onRecordingStopped();
 }
 
-void MacroManager::loadSettings()
+void MacroManager::replayCurrentMacro(NNEditor *editor)
 {
-    qInfo(Q_FUNC_INFO);
-
-    ApplicationSettings settings;
-
-    int size = settings.beginReadArray("Macros");
-    for (int i = 0; i < size; ++i) {
-        settings.setArrayIndex(i);
-
-        if (settings.value("Macro").canConvert<Macro>()) {
-            Macro *m = new Macro(settings.value("Macro").value<Macro>());
-            macros.append(m);
-        }
-        else {
-            qWarning("MacroManager: Skipping invalid Macro");
-        }
-    }
-    settings.endArray();
+    if (currentMacro) currentMacro->replay(editor);
 }
 
-void MacroManager::saveSettings() const
+void MacroManager::saveCurrentMacro(const std::string &macroName)
 {
-    qInfo(Q_FUNC_INFO);
-
-    ApplicationSettings settings;
-
-    settings.remove("Macros");
-
-    if (macros.size() > 0) {
-        settings.beginWriteArray("Macros");
-        for (int i = 0; i < macros.size(); ++i) {
-            settings.setArrayIndex(i);
-            settings.setValue("Macro", QVariant::fromValue(*macros.at(i)));
-        }
-        settings.endArray();
-    }
-}
-
-void MacroManager::replayCurrentMacro(ScintillaNext *editor)
-{
-    qInfo(Q_FUNC_INFO);
-
-    currentMacro->replay(editor);
-}
-
-void MacroManager::saveCurrentMacro(const QString &macroName)
-{
-    qInfo(Q_FUNC_INFO);
+    if (!currentMacro) return;
 
     isCurrentMacroSaved = true;
-
     currentMacro->setName(macroName);
-    macros.append(currentMacro);
+    macros.push_back(currentMacro);
 }
 
 bool MacroManager::hasCurrentUnsavedMacro() const
 {
-    return currentMacro != Q_NULLPTR && isCurrentMacroSaved == false;
+    return currentMacro != nullptr && !isCurrentMacroSaved;
+}
+
+void MacroManager::loadSettings(IniSettings &ini)
+{
+    int count = ini.getInt("Macros.count", 0);
+    for (int i = 0; i < count; ++i) {
+        std::string prefix = "Macros.macro" + std::to_string(i) + ".";
+        std::string name = ini.get(prefix + "name");
+        int nsteps = ini.getInt(prefix + "steps", 0);
+        if (name.empty()) continue;
+
+        Macro *m = new Macro();
+        m->setName(name);
+        for (int j = 0; j < nsteps; ++j) {
+            std::string sv = ini.get(prefix + "step" + std::to_string(j));
+            if (sv.empty()) continue;
+            size_t comma = sv.find(',');
+            uint32_t cmd = (uint32_t)std::stoul(sv.substr(0, comma));
+            std::string text;
+            if (comma != std::string::npos) {
+                std::string hex = sv.substr(comma + 1);
+                for (size_t k = 0; k + 1 < hex.size(); k += 2) {
+                    text += (char)std::stoul(hex.substr(k, 2), nullptr, 16);
+                }
+            }
+            m->addStep(NNMacroStep((NNMacroCmd)cmd, text));
+        }
+        macros.push_back(m);
+    }
+}
+
+void MacroManager::saveSettings(IniSettings &ini) const
+{
+    ini.setInt("Macros.count", (int)macros.size());
+    for (int i = 0; i < (int)macros.size(); ++i) {
+        const Macro *m = macros[i];
+        std::string prefix = "Macros.macro" + std::to_string(i) + ".";
+        ini.set(prefix + "name", m->getName());
+        ini.setInt(prefix + "steps", (int)m->getSteps().size());
+        for (int j = 0; j < (int)m->getSteps().size(); ++j) {
+            const NNMacroStep &s = m->getSteps()[j];
+            std::string sv = std::to_string((uint32_t)s.cmd) + ",";
+            char buf[3];
+            for (unsigned char c : s.text) {
+                snprintf(buf, sizeof(buf), "%02x", c);
+                sv += buf;
+            }
+            ini.set(prefix + "step" + std::to_string(j), sv);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 /*
  * This file is part of Notepad Next.
- * Copyright 2022 Justin Dailey
+ * Copyright 2019 Justin Dailey
  *
  * Notepad Next is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,16 +10,11 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#define Uses_TMenuBar
+#define Uses_TStatusLine
+#define Uses_TRect
+#include <tvision/tv.h>
 
-class IniSettings;
-
-class SessionManager
-{
-public:
-    SessionManager() = default;
-
-    void loadSession(IniSettings &ini, std::vector<std::string> &outFiles);
-    void saveSession(IniSettings &ini, const std::vector<std::string> &openFiles);
-};
+// Factory functions called by TProgInit
+TMenuBar    *createNNMenuBar(TRect r);
+TStatusLine *createNNStatusLine(TRect r);

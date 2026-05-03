@@ -6,62 +6,55 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
 
-#ifndef FINDER_H
-#define FINDER_H
+#include <string>
+#include <functional>
 
-#include "ScintillaNext.h"
+// Search flags (matching Scintilla SCFIND_* values)
+static constexpr int FIND_MATCHCASE   = 0x04;
+static constexpr int FIND_WHOLEWORD   = 0x02;
+static constexpr int FIND_WORDSTART   = 0x01;
+static constexpr int FIND_REGEXP      = 0x200000;
+
+struct FindRange {
+    int start = -1;
+    int end   = -1;
+    bool valid() const { return start >= 0; }
+};
+
+class NNEditor;
 
 class Finder
 {
 public:
-    explicit Finder(ScintillaNext *edit);
+    explicit Finder(NNEditor *edit);
 
-    void setEditor(ScintillaNext *editor);
+    void setEditor(NNEditor *editor);
     void setSearchFlags(int flags);
     void setWrap(bool wrap);
-    void setSearchText(const QString &text);
+    void setSearchText(const std::string &text);
 
-    Sci_CharacterRange findNext(int startPos = INVALID_POSITION);
-    Sci_CharacterRange findPrev();
+    FindRange findNext(int startPos = -1);
+    FindRange findPrev();
     int count();
 
     bool didLatestSearchWrapAround() const { return did_latest_search_wrap; }
 
-    Sci_CharacterRange replaceSelectionIfMatch(const QString &replaceText);
-    int replaceAll(const QString &replaceText);
+    FindRange replaceSelectionIfMatch(const std::string &replaceText);
+    int replaceAll(const std::string &replaceText);
 
-    template<typename Func>
-    void forEachMatch(Func callback) { forEachMatchInRange(callback, {0, (Sci_PositionCR)editor->length()}); }
-
-    template<typename Func>
-    void forEachMatchInRange(Func callback, Sci_CharacterRange range);
+    void forEachMatch(std::function<int(int start, int end)> callback);
 
 private:
-    ScintillaNext *editor;
-    bool did_latest_search_wrap = false;
+    FindRange searchForward(int from, int to);
+    FindRange searchBackward(int from, int to);
 
+    NNEditor *editor;
+    bool did_latest_search_wrap = false;
     bool wrap = false;
     int search_flags = 0;
-    QString text;
+    std::string text;
 };
-
-
-template<typename Func>
-void Finder::forEachMatchInRange(Func callback, Sci_CharacterRange range)
-{
-    editor->setSearchFlags(search_flags);
-    editor->forEachMatchInRange(text.toUtf8(), callback, range);
-}
-
-#endif // FINDER_H

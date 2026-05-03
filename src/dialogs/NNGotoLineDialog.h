@@ -1,6 +1,6 @@
 /*
  * This file is part of Notepad Next.
- * Copyright 2022 Justin Dailey
+ * Copyright 2019 Justin Dailey
  *
  * Notepad Next is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,16 +10,8 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
-class IniSettings;
-
-class SessionManager
-{
+// Returns the line number entered by the user, or -1 on cancel.
+class NNGotoLineDialog {
 public:
-    SessionManager() = default;
-
-    void loadSession(IniSettings &ini, std::vector<std::string> &outFiles);
-    void saveSession(IniSettings &ini, const std::vector<std::string> &openFiles);
+    int run();
 };

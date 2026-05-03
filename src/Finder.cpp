@@ -6,178 +6,200 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "Finder.h"
-#include "UndoAction.h"
+#include "NNEditor.h"
+#include <regex>
+#include <algorithm>
+#include <cctype>
 
-Finder::Finder(ScintillaNext *edit) :
-    editor(edit)
+Finder::Finder(NNEditor *edit) : editor(edit) {}
+
+void Finder::setEditor(NNEditor *editor_) { editor = editor_; }
+void Finder::setSearchFlags(int flags)    { search_flags = flags; }
+void Finder::setWrap(bool wrap_)          { wrap = wrap_; }
+void Finder::setSearchText(const std::string &text_) { text = text_; }
+
+static FindRange literalSearch(const std::string &haystack, const std::string &needle,
+                               int from, int to, bool caseSensitive)
 {
-    search_flags = editor->searchFlags();
+    if (needle.empty() || from >= to) return {};
+    std::string h = haystack.substr(from, to - from);
+    std::string n = needle;
+    if (!caseSensitive) {
+        for (char &c : h) c = (char)std::tolower((unsigned char)c);
+        for (char &c : n) c = (char)std::tolower((unsigned char)c);
+    }
+    size_t pos = h.find(n);
+    if (pos == std::string::npos) return {};
+    return { from + (int)pos, from + (int)pos + (int)needle.size() };
 }
 
-void Finder::setEditor(ScintillaNext *editor)
+static FindRange literalSearchBackward(const std::string &haystack, const std::string &needle,
+                                       int from, int to, bool caseSensitive)
 {
-    this->editor = editor;
+    if (needle.empty() || from >= to) return {};
+    std::string h = haystack.substr(from, to - from);
+    std::string n = needle;
+    if (!caseSensitive) {
+        for (char &c : h) c = (char)std::tolower((unsigned char)c);
+        for (char &c : n) c = (char)std::tolower((unsigned char)c);
+    }
+    size_t pos = h.rfind(n);
+    if (pos == std::string::npos) return {};
+    return { from + (int)pos, from + (int)pos + (int)needle.size() };
 }
 
-void Finder::setSearchFlags(int flags)
+FindRange Finder::searchForward(int from, int to)
 {
-    this->search_flags = flags;
+    std::string content = editor->flatText();
+    if (to < 0 || to > (int)content.size()) to = (int)content.size();
+    bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
+
+    if (search_flags & FIND_REGEXP) {
+        auto flags = std::regex::ECMAScript;
+        if (!caseSens) flags |= std::regex::icase;
+        try {
+            std::regex re(text, flags);
+            auto begin = content.cbegin() + from;
+            auto end   = content.cbegin() + to;
+            std::smatch m;
+            if (std::regex_search(begin, end, m, re)) {
+                int s = (int)(m.prefix().second - content.cbegin());
+                return { s, s + (int)m[0].length() };
+            }
+        } catch (...) {}
+        return {};
+    }
+    return literalSearch(content, text, from, to, caseSens);
 }
 
-void Finder::setWrap(bool wrap)
+FindRange Finder::searchBackward(int from, int to)
 {
-    this->wrap = wrap;
+    std::string content = editor->flatText();
+    if (to < 0 || to > (int)content.size()) to = (int)content.size();
+    bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
+    return literalSearchBackward(content, text, from, to, caseSens);
 }
 
-void Finder::setSearchText(const QString &text)
-{
-    this->text = text;
-}
-
-Sci_CharacterRange Finder::findNext(int startPos)
+FindRange Finder::findNext(int startPos)
 {
     did_latest_search_wrap = false;
+    if (text.empty()) return {};
 
-    if (text.isEmpty())
-        return {INVALID_POSITION, INVALID_POSITION};
-
-    const int pos = startPos == INVALID_POSITION ? editor->selectionEnd() : startPos;
-    const QByteArray textData = text.toUtf8();
-
-    editor->setTargetRange(pos, editor->length());
-    editor->setSearchFlags(search_flags);
-
-    if (editor->searchInTarget(textData.length(), textData.constData()) != INVALID_POSITION) {
-        return {static_cast<Sci_PositionCR>(editor->targetStart()), static_cast<Sci_PositionCR>(editor->targetEnd())};
+    int pos = startPos < 0 ? editor->selectionEnd() : startPos;
+    FindRange r = searchForward(pos, -1);
+    if (r.valid()) return r;
+    if (wrap) {
+        r = searchForward(0, pos);
+        if (r.valid()) { did_latest_search_wrap = true; return r; }
     }
-    else if (wrap) {
-        editor->setTargetRange(0, pos);
-        if (editor->searchInTarget(textData.length(), textData.constData()) != INVALID_POSITION) {
-            did_latest_search_wrap = true;
-
-            return {static_cast<Sci_PositionCR>(editor->targetStart()), static_cast<Sci_PositionCR>(editor->targetEnd())};
-        }
-    }
-
-    return {INVALID_POSITION, INVALID_POSITION};
+    return {};
 }
 
-Sci_CharacterRange Finder::findPrev()
+FindRange Finder::findPrev()
 {
     did_latest_search_wrap = false;
+    if (text.empty()) return {};
 
-    if (text.isEmpty())
-        return {INVALID_POSITION, INVALID_POSITION};
-
-    const int pos = editor->selectionStart();
-    const QByteArray textData = text.toUtf8();
-
-    editor->setTargetRange(pos, editor->length());
-    editor->setSearchFlags(search_flags);
-
-    auto range = editor->findText(editor->searchFlags(), textData.constData(), pos, 0);
-
-    if (range.first != INVALID_POSITION) {
-        return {static_cast<Sci_PositionCR>(range.first), static_cast<Sci_PositionCR>(range.second)};
+    int pos = editor->selectionStart();
+    FindRange r = searchBackward(0, pos);
+    if (r.valid()) return r;
+    if (wrap) {
+        r = searchBackward(pos, -1);
+        if (r.valid()) { did_latest_search_wrap = true; return r; }
     }
-    else if (wrap) {
-        range = editor->findText(editor->searchFlags(), textData.constData(), editor->length(), pos);
-        if (range.first != INVALID_POSITION) {
-            did_latest_search_wrap = true;
-
-            return {static_cast<Sci_PositionCR>(range.first), static_cast<Sci_PositionCR>(range.second)};
-        }
-    }
-
-    return {INVALID_POSITION, INVALID_POSITION};
+    return {};
 }
 
-// Count all occurrences in the document
 int Finder::count()
 {
     int total = 0;
-
-    if (text.length() > 0) {
-        forEachMatch([&](int start, int end) {
-            Q_UNUSED(start);
-            total++;
-            return end;
-        });
-    }
-
+    forEachMatch([&](int, int end) { total++; return end; });
     return total;
 }
 
-Sci_CharacterRange Finder::replaceSelectionIfMatch(const QString &replaceText)
+void Finder::forEachMatch(std::function<int(int start, int end)> callback)
 {
-    const QByteArray textData = text.toUtf8();
-    bool isRegex = editor->searchFlags() & SCFIND_REGEXP;
+    std::string content = editor->flatText();
+    int len = (int)content.size();
+    bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
 
-    // Search just in the selection to see if the current selection is a match
-    editor->setTargetStart(editor->selectionStart());
-    editor->setTargetEnd(editor->selectionEnd());
-    editor->setSearchFlags(search_flags);
-
-    if (editor->searchInTarget(textData.length(), textData.constData()) != INVALID_POSITION) {
-        const QByteArray replaceData = replaceText.toUtf8();
-
-        if (isRegex)
-            editor->replaceTargetRE(replaceData.length(), replaceData.constData());
-        else
-            editor->replaceTarget(replaceData.length(), replaceData.constData());
-
-        return {static_cast<Sci_PositionCR>(editor->targetStart()), static_cast<Sci_PositionCR>(editor->targetEnd())};
+    if (search_flags & FIND_REGEXP) {
+        auto flags = std::regex::ECMAScript;
+        if (!caseSens) flags |= std::regex::icase;
+        try {
+            std::regex re(text, flags);
+            auto it  = std::sregex_iterator(content.begin(), content.end(), re);
+            auto end = std::sregex_iterator();
+            for (; it != end; ++it) {
+                int s = (int)it->position();
+                int e = s + (int)(*it)[0].length();
+                int next = callback(s, e);
+                if (next <= s) break;
+            }
+        } catch (...) {}
+        return;
     }
 
-    return {INVALID_POSITION, INVALID_POSITION};
+    int pos = 0;
+    while (pos < len) {
+        FindRange r = literalSearch(content, text, pos, len, caseSens);
+        if (!r.valid()) break;
+        int next = callback(r.start, r.end);
+        if (next <= r.start) break;
+        pos = next;
+    }
 }
 
-int Finder::replaceAll(const QString &replaceText)
+FindRange Finder::replaceSelectionIfMatch(const std::string &replaceText)
 {
-    if (text.isEmpty())
-        return 0;
+    int selStart = editor->selectionStart();
+    int selEnd   = editor->selectionEnd();
+    std::string content = editor->flatText();
+    bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
 
-    const QByteArray &replaceData = replaceText.toUtf8();
-    const QByteArray &b = text.toUtf8();
-    const char *c = b.constData();
-    Sci_TextToFind ttf {{0, (Sci_PositionCR)editor->length()}, c, {-1, -1}};
-    const bool isRegex = search_flags & SCFIND_REGEXP;
+    FindRange r = literalSearch(content, text, selStart, selEnd, caseSens);
+    if (!r.valid() || r.start != selStart || r.end != selEnd) return {};
+
+    editor->replaceSelection(replaceText);
+    return { selStart, selStart + (int)replaceText.size() };
+}
+
+int Finder::replaceAll(const std::string &replaceText)
+{
+    if (text.empty()) return 0;
+
+    std::string content = editor->flatText();
+    bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
+    std::string result;
     int total = 0;
+    int pos = 0;
+    int len = (int)content.size();
 
-    // Don't technically need to set the search flags here but do it just in case something looks at the search flags later
-    editor->setSearchFlags(search_flags);
-
-    // NOTE: can't use editor->forEachMatch() here since the search range can grow since the document is changing
-
-    const UndoAction ua(editor);
-    while (editor->send(SCI_FINDTEXT, search_flags, reinterpret_cast<sptr_t>(&ttf)) != -1) {
-        const int start = ttf.chrgText.cpMin;
-        const int end = ttf.chrgText.cpMax;
-
-        editor->setTargetRange(start, end);
-
-        if (isRegex)
-            ttf.chrg.cpMin = start + editor->replaceTargetRE(replaceData.length(), replaceData.constData());
-        else
-            ttf.chrg.cpMin = start + editor->replaceTarget(replaceData.length(), replaceData.constData());
-
-        // The replace could have changed the document size, so update the end of the search range
-        ttf.chrg.cpMax = editor->length();
-
-        total++;
+    if (search_flags & FIND_REGEXP) {
+        auto flags = std::regex::ECMAScript;
+        if (!caseSens) flags |= std::regex::icase;
+        try {
+            std::regex re(text, flags);
+            total = (int)std::distance(
+                std::sregex_iterator(content.begin(), content.end(), re),
+                std::sregex_iterator());
+            result = std::regex_replace(content, re, replaceText);
+        } catch (...) { return 0; }
+    } else {
+        while (pos < len) {
+            FindRange r = literalSearch(content, text, pos, len, caseSens);
+            if (!r.valid()) { result += content.substr(pos); break; }
+            result += content.substr(pos, r.start - pos);
+            result += replaceText;
+            pos = r.end;
+            total++;
+        }
+        if (pos >= len && total == 0) return 0;
     }
 
+    if (total > 0) editor->replaceAll(result);
     return total;
 }

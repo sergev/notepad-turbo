@@ -6,54 +6,33 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "MacroRecorder.h"
-#include "ScintillaNext.h"
-#include <QMetaEnum>
+#include "NNEditor.h"
 
-using namespace Scintilla;
-
-
-MacroRecorder::MacroRecorder(QObject *parent) :
-    QObject(parent)
+void MacroRecorder::startRecording(NNEditor *editor_)
 {
-}
-
-void MacroRecorder::startRecording(ScintillaNext *editor)
-{
-    this->editor = editor;
-    connect(editor, &ScintillaNext::macroRecord, this, &MacroRecorder::recordMacroStep);
-
-    // We don't "own" the macro so don't delete it if it is a valid pointer
+    editor = editor_;
     macro = new Macro();
-
-    editor->startRecord();
+    editor->setRecorder(this);
 }
 
 Macro *MacroRecorder::stopRecording()
 {
-    disconnect(editor, &ScintillaNext::macroRecord, this, &MacroRecorder::recordMacroStep);
-
-    editor->stopRecord();
+    if (editor) {
+        editor->setRecorder(nullptr);
+        editor = nullptr;
+    }
 
     Macro *m = macro;
-    macro = Q_NULLPTR;
+    macro = nullptr;
     return m;
 }
 
-void MacroRecorder::recordMacroStep(Message message, uptr_t wParam, sptr_t lParam)
+void MacroRecorder::recordStep(NNMacroCmd cmd, const std::string &text)
 {
-    qInfo(Q_FUNC_INFO);
-
-    macro->addMacroStep(message, wParam, lParam);
+    if (macro) {
+        macro->addStep(cmd, text);
+    }
 }

@@ -6,64 +6,61 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "RecentFilesListManager.h"
+#include "IniSettings.h"
 
-RecentFilesListManager::RecentFilesListManager(QObject *parent) :
-    QObject(parent)
+#include <algorithm>
+
+RecentFilesListManager::RecentFilesListManager(IniSettings *settings)
+    : settings(settings)
 {
 }
 
-void RecentFilesListManager::addFile(const QString &filePath)
+void RecentFilesListManager::load()
 {
-    qInfo(Q_FUNC_INFO);
-
-    // Attempt to remove it first to make sure it is not added twice
-    removeFile(filePath);
-
-    // Set a limit on how many can be in the list
-    if (recentFiles.size() >= 10) {
-        recentFiles.removeLast();
+    recentFiles.clear();
+    int count = settings->getInt("RecentFiles.count", 0);
+    for (int i = 0; i < count && i < MaxFiles; ++i) {
+        std::string key = "RecentFiles.file." + std::to_string(i);
+        std::string path = settings->get(key);
+        if (!path.empty())
+            recentFiles.push_back(path);
     }
-
-    recentFiles.prepend(filePath);
 }
 
-void RecentFilesListManager::removeFile(const QString &filePath)
+void RecentFilesListManager::save() const
 {
-    recentFiles.removeOne(filePath);
+    settings->removeSection("RecentFiles");
+    settings->setInt("RecentFiles.count", (int)recentFiles.size());
+    for (int i = 0; i < (int)recentFiles.size(); ++i)
+        settings->set("RecentFiles.file." + std::to_string(i), recentFiles[i]);
+}
+
+void RecentFilesListManager::addFile(const std::string &filePath)
+{
+    auto it = std::find(recentFiles.begin(), recentFiles.end(), filePath);
+    if (it != recentFiles.end())
+        recentFiles.erase(it);
+    recentFiles.insert(recentFiles.begin(), filePath);
+    if ((int)recentFiles.size() > MaxFiles)
+        recentFiles.resize(MaxFiles);
+}
+
+void RecentFilesListManager::removeFile(const std::string &filePath)
+{
+    auto it = std::find(recentFiles.begin(), recentFiles.end(), filePath);
+    if (it != recentFiles.end())
+        recentFiles.erase(it);
 }
 
 void RecentFilesListManager::clear()
 {
-    // Clear the file list
     recentFiles.clear();
 }
 
-QString RecentFilesListManager::mostRecentFile() const
+std::string RecentFilesListManager::mostRecentFile() const
 {
-    Q_ASSERT(!recentFiles.empty());
-
-    return recentFiles.first();
-}
-
-QStringList RecentFilesListManager::fileList() const
-{
-    return recentFiles;
-}
-
-void RecentFilesListManager::setFileList(const QStringList &list)
-{
-    clear();
-    recentFiles.append(list);
+    return recentFiles.empty() ? std::string{} : recentFiles.front();
 }

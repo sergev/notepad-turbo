@@ -6,58 +6,45 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MACROMANAGER_H
-#define MACROMANAGER_H
+#pragma once
 
 #include "MacroRecorder.h"
+#include <vector>
+#include <string>
+#include <functional>
 
-#include <QObject>
+class IniSettings;
+class NNEditor;
 
-
-class MacroManager : public QObject
+class MacroManager
 {
-    Q_OBJECT
-
 public:
-    explicit MacroManager(QObject *parent = nullptr);
-    virtual ~MacroManager();
+    MacroManager() = default;
+    ~MacroManager();
 
-    bool isRecording() const;
-    QVector<Macro *> &availableMacros() { return macros; };
+    bool isRecording() const { return _isRecording; }
+    std::vector<Macro *> &availableMacros() { return macros; }
 
-    void replayCurrentMacro(ScintillaNext *editor);
-    void saveCurrentMacro(const QString &macroName);
+    void replayCurrentMacro(NNEditor *editor);
+    void saveCurrentMacro(const std::string &macroName);
     bool hasCurrentUnsavedMacro() const;
     Macro *getCurrentMacro() const { return currentMacro; }
 
-public slots:
-    void startRecording(ScintillaNext *editor);
+    void startRecording(NNEditor *editor);
     void stopRecording();
 
-private slots:
-    void loadSettings();
-    void saveSettings() const;
+    void loadSettings(IniSettings &ini);
+    void saveSettings(IniSettings &ini) const;
 
-signals:
-    void recordingStarted();
-    void recordingStopped();
+    std::function<void()> onRecordingStarted;
+    std::function<void()> onRecordingStopped;
 
 private:
     MacroRecorder recorder;
-    Macro *currentMacro = Q_NULLPTR;
-    QVector<Macro *> macros;
+    Macro *currentMacro = nullptr;
+    std::vector<Macro *> macros;
     bool _isRecording = false;
     bool isCurrentMacroSaved = false;
 };
-
-#endif // MACROMANAGER_H

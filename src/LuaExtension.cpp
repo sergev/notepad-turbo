@@ -6,16 +6,7 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * Notepad Next is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Notepad Next.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +17,7 @@
 
 #include "Scintilla.h"
 #include "LuaExtension.h"
+#include "IEditorAPI.h"
 
 #include "IFaceTableMixer.h"
 #include "SciIFaceTable.h"
@@ -34,13 +26,11 @@
 
 IFaceTableMixer ifacemixer;
 
-// From lua.c
 #define EOFMARK         "<eof>"
 #define marklen         (sizeof(EOFMARK)/sizeof(char) - 1)
 
 static bool call_function(lua_State *L, int nargs, bool ignoreFunctionReturnValue);
 
-// Helper function from SciTE
 [[maybe_unused]] static int Substitute(std::string &s, const std::string &sFind, const std::string &sReplace) {
     int c = 0;
     size_t lenFind = sFind.size();
@@ -54,7 +44,6 @@ static bool call_function(lua_State *L, int nargs, bool ignoreFunctionReturnValu
     return c;
 }
 
-// Helper function from SciTE
 [[maybe_unused]] static bool Exists(const char *fileName) {
     bool ret = false;
     if (fileName && fileName[0]) {
@@ -67,36 +56,23 @@ static bool call_function(lua_State *L, int nargs, bool ignoreFunctionReturnValu
     return ret;
 }
 
-
-// A note on naming conventions:
-// I've gone back and forth on this a bit, trying different styles.
-// It isn't easy to get something that feels consistent, considering
-// that the Lua API uses lower case, underscore-separated words and
-// Scintilla of course uses mixed case with no underscores.
-
-// What I've settled on is that functions that require you to think
-// about the Lua stack are likely to be mixed with Lua API functions,
-// so these should using a naming convention similar to Lua itself.
-// Functions that don't manipulate Lua at a low level should follow
-// the normal SciTE convention.  There is some grey area of course,
-// and for these I just make a judgement call
-
-static ScintillaEdit *editor;
+static IEditorAPI *editor;
 static lua_State *luaState = 0;
 static bool luaDisabled = false;
 static bool tracebackEnabled = true;
 
 typedef int NppExtensionAPIPane;
+
 void hostTrace(const char *s)
 {
-    qInfo("%s", s);
-}
-void hostTraceError(const char *s)
-{
-    qWarning("%s", s);
+    fprintf(stderr, "%s", s);
 }
 
-// Forward declarations
+void hostTraceError(const char *s)
+{
+    fprintf(stderr, "%s", s);
+}
+
 static NppExtensionAPIPane check_pane_object(lua_State *L, int index);
 static void push_pane_object(lua_State *L, NppExtensionAPIPane p);
 static int iface_function_helper(lua_State *L, const IFaceFunction &func);
@@ -125,11 +101,6 @@ inline int absolute_index(lua_State *L, int index) {
 }
 
 [[maybe_unused]] static int cf_npp_send(lua_State *L) {
-    // This is reinstated as a replacement for the old <pane>:send, which was removed
-    // due to safety concerns.  Is now exposed as npp.SendEditor / npp.SendOutput.
-    // It is rewritten to be typesafe, checking the arguments against the metadata in
-    // IFaceTable in the same way that the object interface does.
-
     IFaceFunction propfunc;
     int paneIndex = lua_upvalueindex(1);
     check_pane_object(L, paneIndex);
@@ -154,7 +125,7 @@ inline int absolute_index(lua_State *L, int index) {
             return 0;
         }
     } else {
-        raise_error(L, "Message number does not match any published Scintilla / Notepad++ function or property");
+        raise_error(L, "Message number does not match any published Scintilla function or property");
         return 0;
     }
 }
@@ -170,7 +141,7 @@ inline int absolute_index(lua_State *L, int index) {
         lua_pushstring(L, constName);
         return 1;
     } else {
-        raise_error(L, "Argument does not match any Scintilla / Notepad++ constant");
+        raise_error(L, "Argument does not match any Scintilla constant");
         return 0;
     }
 }
@@ -180,20 +151,18 @@ void stackdump(lua_State* l)
     int i;
     int top = lua_gettop(l);
 
-    for (i = 1; i <= top; i++)
-    {  /* repeat for each level */
+    for (i = 1; i <= top; i++) {
         int t = lua_type(l, i);
         hostTrace(lua_typename(l, t));
-        hostTrace("  ");  /* put a separator */
+        hostTrace("  ");
     }
-    hostTrace("\n");  /* end the listing */
+    hostTrace("\n");
 }
 
 static NppExtensionAPIPane check_pane_object(lua_State *L, int index) {
     NppExtensionAPIPane *pPane = static_cast<NppExtensionAPIPane *>(luaL_testudata(L, index, "Nn_MT_Pane"));
 
     if ((!pPane) && lua_istable(L, index)) {
-        // so that nested objects have a convenient way to do a back reference
         int absIndex = absolute_index(L, index);
         lua_pushliteral(L, "pane");
         lua_gettable(L, absIndex);
@@ -205,9 +174,6 @@ static NppExtensionAPIPane check_pane_object(lua_State *L, int index) {
     }
 
     pPane = static_cast<NppExtensionAPIPane *>(luaL_testudata(L, index, "Nn_MT_Application"));
-
-    // NOTE: I'm not sure what the above comment about the "back reference" means. This may or
-    // may not apply in this case. So that if statement may need pasted/modified in this case
 
     if (pPane) {
         return *pPane;
@@ -221,7 +187,7 @@ static NppExtensionAPIPane check_pane_object(lua_State *L, int index) {
         lua_pushliteral(L, "Pane object expected.");
 
     raise_error(L);
-    return 0; // this line never reached
+    return 0;
 }
 
 static int cf_global_print(lua_State *L) {
@@ -285,7 +251,7 @@ static int cf_global_print(lua_State *L) {
             }
         } else if (result == LUA_ERRRUN) {
             lua_getglobal(L, "print");
-            lua_insert(L, -2); // use pushed error message
+            lua_insert(L, -2);
             lua_pcall(L, 1, 0, 0);
         } else {
             lua_pop(L, 1);
@@ -303,13 +269,11 @@ static int cf_global_print(lua_State *L) {
 
 struct ScintillaFailure {
     sptr_t status;
-    explicit ScintillaFailure(sptr_t status_) : status(status_) {
-    }
+    explicit ScintillaFailure(sptr_t status_) : status(status_) {}
 };
 
 static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
-    NppExtensionAPIPane p = check_pane_object(L, 1);
-    Q_UNUSED(p)
+    (void)check_pane_object(L, 1);
 
     int arg = 2;
 
@@ -325,8 +289,6 @@ static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
         loopParamCount = 0;
     } else if ((func.paramType[1] == iface_stringresult) || (func.returnType == iface_stringresult)) {
         needStringResult = (func.paramType[1] == iface_stringresult) || (func.returnType == iface_stringresult) ? string : tstring;
-        // The buffer will be allocated later, so it won't leak if Lua does
-        // a longjmp in response to a bad arg.
         if (func.paramType[0] == iface_length) {
             loopParamCount = 0;
         } else {
@@ -334,7 +296,6 @@ static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
         }
     }
 
-    // Specifically handle these 2 messages because they carry the setter in the 2nd param
     if (func.value == SCI_SETMARGINLEFT || func.value == SCI_SETMARGINRIGHT) {
         params[1] = static_cast<sptr_t>(luaL_checkinteger(L, arg++));
     }
@@ -360,13 +321,10 @@ static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
         if (needStringResult == string) {
             stringResultLen = editor->send(func.value, params[0], 0);
             if (stringResultLen > 0) {
-                // not all string result methods are guaranteed to add a null terminator
                 stringResult = new char[stringResultLen+1];
                 stringResult[stringResultLen]='\0';
                 params[1] = reinterpret_cast<sptr_t>(stringResult);
             } else {
-                // Is this an error?  Are there any cases where it's not an error,
-                // and where the right thing to do is just return a blank string?
                 return 0;
             }
         }
@@ -375,11 +333,6 @@ static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
             params[0] = stringResultLen;
         }
     }
-
-    // Now figure out what to do with the param types and return type.
-    // - stringresult gets inserted at the start of return tuple.
-    // - numeric return type gets returned to lua as a number (following the stringresult)
-    // - other return types e.g. void get dropped.
 
     sptr_t result = 0;
     try {
@@ -392,7 +345,6 @@ static int iface_function_helper(lua_State *L, const IFaceFunction &func) {
         failureExplanation += " for message ";
         failureExplanation += std::to_string(func.value);
         failureExplanation += ".\n";
-        // Reset status before continuing
         editor->send(SCI_SETSTATUS, SC_STATUS_OK, 0);
         hostTraceError(failureExplanation.c_str());
     }
@@ -422,8 +374,6 @@ struct IFacePropertyBinding {
 };
 
 static int cf_ifaceprop_metatable_index(lua_State *L) {
-    // if there is a getter, __index calls it
-    // otherwise, __index raises "property 'name' is write-only".
     IFacePropertyBinding *ipb = static_cast<IFacePropertyBinding *>(luaL_testudata(L, 1, "Nn_MT_IFacePropertyBinding"));
     if (!(ipb && IFacePropertyIsScriptable(*(ipb->prop)))) {
         raise_error(L, "Internal error: property binding is improperly set up");
@@ -435,7 +385,6 @@ static int cf_ifaceprop_metatable_index(lua_State *L) {
     }
     IFaceFunction func = ipb->prop->GetterFunction();
 
-    // rewrite the stack to match what the function expects.  put pane at index 1; param is already at index 2.
     push_pane_object(L, ipb->pane);
     lua_replace(L, 1);
     lua_settop(L, 2);
@@ -454,8 +403,6 @@ static int cf_ifaceprop_metatable_newindex(lua_State *L) {
     }
     IFaceFunction func = ipb->prop->SetterFunction();
 
-    // rewrite the stack to match what the function expects.
-    // pane at index 1; param at index 2, value at index 3
     push_pane_object(L, ipb->pane);
     lua_replace(L, 1);
     lua_settop(L, 3);
@@ -479,21 +426,13 @@ static int push_iface_function(lua_State *L, const char *name, IFaceTableInterfa
         if (IFaceFunctionIsScriptable(*func)) {
             lua_pushlightuserdata(L, (void*)func);
             lua_pushcclosure(L, cf_pane_iface_function, 1);
-
-            // Since Lua experts say it is inefficient to create closures / cfunctions
-            // in an inner loop, I tried caching the closures in the metatable, and looking
-            // for them there first.  However, it made very little difference and did not
-            // seem worth the added complexity. - WBD
-
             return 1;
         }
     }
-    return -1; // signal to try next pane index handler
+    return -1;
 }
 
 static int push_iface_propval(lua_State *L, const char *name, IFaceTableInterface *iface) {
-    // this function doesn't raise errors, but returns 0 if the function is not handled.
-
     auto prop = iface->FindProperty(name);
     if (prop != nullptr) {
         if (!IFacePropertyIsScriptable(*prop)) {
@@ -507,10 +446,7 @@ static int push_iface_propval(lua_State *L, const char *name, IFaceTableInterfac
                 return iface_function_helper(L, prop->GetterFunction());
             }
         } else if (prop->paramType == iface_bool) {
-            // The bool getter is untested since there are none in the iface.
-            // However, the following is suggested as a reference protocol.
-            NppExtensionAPIPane p = check_pane_object(L, 1);
-            Q_UNUSED(p)
+            (void)check_pane_object(L, 1);
 
             if (prop->getter) {
                 if (editor->send(prop->getter, 1, 0)) {
@@ -523,12 +459,6 @@ static int push_iface_propval(lua_State *L, const char *name, IFaceTableInterfac
                 }
             }
         } else {
-            // Indexed property.  These return an object with the following behavior:
-            // if there is a getter, __index calls it
-            // otherwise, __index raises "property 'name' is write-only".
-            // if there is a setter, __newindex calls it
-            // otherwise, __newindex raises "property 'name' is read-only"
-
             IFacePropertyBinding *ipb = static_cast<IFacePropertyBinding *>(lua_newuserdata(L, sizeof(IFacePropertyBinding)));
             if (ipb) {
                 ipb->pane = check_pane_object(L, 1);
@@ -550,7 +480,7 @@ static int push_iface_propval(lua_State *L, const char *name, IFaceTableInterfac
         }
     }
 
-    return -1; // signal to try next pane index handler
+    return -1;
 }
 
 static int cf_pane_metatable_index(lua_State *L) {
@@ -558,7 +488,6 @@ static int cf_pane_metatable_index(lua_State *L) {
     if (lua_isstring(L, 2)) {
         const char *name = lua_tostring(L, 2);
 
-        // these return the number of values pushed (possibly 0), or -1 if no match
         int results = push_iface_function(L, name, iface);
         if (results < 0)
             results = push_iface_propval(L, name, iface);
@@ -587,7 +516,6 @@ static int cf_pane_metatable_newindex(lua_State *L) {
         if (prop != nullptr) {
             if (IFacePropertyIsScriptable(*prop)) {
                 if (prop->setter) {
-                    // stack needs to be rearranged to look like an iface function call
                     lua_remove(L, 2);
                     if (prop->paramType == iface_void) {
                         return iface_function_helper(L, prop->SetterFunction());
@@ -596,8 +524,6 @@ static int cf_pane_metatable_newindex(lua_State *L) {
                             lua_pushboolean(L, 1);
                             lua_insert(L, 2);
                         } else {
-                            // the nil will do as a false value.
-                            // just push an arbitrary numeric value that Scintilla will ignore
                             lua_pushinteger(L, 0);
                         }
                         return iface_function_helper(L, prop->SetterFunction());
@@ -625,9 +551,6 @@ void push_pane_object(lua_State *L, NppExtensionAPIPane p) {
         lua_pushlightuserdata(L, &SciIFaceTable);
         lua_pushcclosure(L, cf_pane_metatable_newindex, 1);
         lua_setfield(L, -2, "__newindex");
-
-        // Push built-in functions into the metatable, where the custom
-        // __index metamethod will find them.
     }
     lua_setmetatable(L, -2);
 }
@@ -636,7 +559,6 @@ static int cf_global_metatable_index(lua_State *L) {
     if (lua_isstring(L, 2)) {
         const char *name = lua_tostring(L, 2);
         if ((name[0] < 'A') || (name[0] > 'Z') || ((name[1] >= 'a') && (name[1] <= 'z'))) {
-            // short circuit; iface constants are always upper-case and start with a letter
             return 0;
         }
 
@@ -648,20 +570,15 @@ static int cf_global_metatable_index(lua_State *L) {
             auto func = ifacemixer.FindFunctionByConstantName(name);
             if (func != nullptr) {
                 lua_pushinteger(L, func->value);
-
-                // FindFunctionByConstantName is slow, so cache the result into the
-                // global table.  My tests show this gives an order of magnitude
-                // improvement.
                 lua_pushvalue(L, 2);
                 lua_pushvalue(L, -2);
                 lua_rawset(L, 1);
-
                 return 1;
             }
         }
     }
 
-    return 0; // global namespace access should not raise errors
+    return 0;
 }
 
 static int LuaPanicFunction(lua_State *L) {
@@ -684,7 +601,6 @@ static bool InitGlobalScope() {
             return false;
         }
         lua_atpanic(luaState, LuaPanicFunction);
-
     }
     else {
         return false;
@@ -692,26 +608,19 @@ static bool InitGlobalScope() {
 
     ifacemixer.AddIFaceTable(&SciIFaceTable);
 
-    // ...register standard libraries
     luaL_openlibs(luaState);
 
-    // override a library function whose default impl uses stdout
     lua_register(luaState, "print", cf_global_print);
 
-    // pane objects
     push_pane_object(luaState, 0);
     lua_setglobal(luaState, "editor");
 
-    // get global environment table from registry
     lua_pushglobaltable(luaState);
-    // Metatable for global namespace, to publish iface constants
     if (luaL_newmetatable(luaState, "Nn_MT_GlobalScope")) {
         lua_pushcfunction(luaState, cf_global_metatable_index);
         lua_setfield(luaState, -2, "__index");
     }
-    // set global index callback hook
     lua_setmetatable(luaState, -2);
-    // remove the global environment table from the stack
     lua_pop(luaState, 1);
 
     return true;
@@ -726,7 +635,7 @@ LuaExtension &LuaExtension::Instance() {
     return singleton;
 }
 
-bool LuaExtension::Initialise(lua_State *L, ScintillaNext *editor_) {
+bool LuaExtension::Initialise(lua_State *L, IEditorAPI *editor_) {
     luaState = L;
     editor = editor_;
     InitGlobalScope();
@@ -734,7 +643,7 @@ bool LuaExtension::Initialise(lua_State *L, ScintillaNext *editor_) {
     return false;
 }
 
-void LuaExtension::setEditor(ScintillaEdit *editor_) {
+void LuaExtension::setEditor(IEditorAPI *editor_) {
     editor = editor_;
 }
 
@@ -758,14 +667,13 @@ bool LuaExtension::RunString(const char *s) {
         }
 
         if (status != LUA_OK) {
-            // Print an error message
             hostTraceError(lua_tostring(luaState, -1));
             hostTraceError("\n");
-            lua_settop(luaState, 0); /* clear stack */
+            lua_settop(luaState, 0);
             return false;
         }
 
-        lua_settop(luaState, 0); /* clear stack */
+        lua_settop(luaState, 0);
     }
 
     return true;
@@ -778,18 +686,15 @@ bool LuaExtension::OnExecute(const char *s) {
 
     if (luaState || InitGlobalScope()) {
         if (isFirstLine) {
-            // First try to compile the chunk as a return statement
             const char *retline = lua_pushfstring(luaState, "return %s;", s);
             status = luaL_loadbuffer(luaState, retline, strlen(retline), "=Console");
             if (status == 0) lua_remove(luaState, -2);
             else lua_pop(luaState, 2);
 
             if (status == LUA_OK) {
-                // It worked, let's call it
                 status = lua_pcall(luaState, 0, LUA_MULTRET, 0);
             }
             else {
-                // Else let's just try it as is
                 status = luaL_loadbuffer(luaState, s, strlen(s), "=Console");
                 if (status == LUA_OK) {
                     status = lua_pcall(luaState, 0, LUA_MULTRET, 0);
@@ -807,7 +712,6 @@ bool LuaExtension::OnExecute(const char *s) {
             }
         }
         else {
-            // Append the new line to what we've gotten so far
             chunk.append("\n");
             chunk.append(s);
             status = luaL_loadbuffer(luaState, chunk.c_str(), chunk.length(), "=Console");
@@ -824,21 +728,18 @@ bool LuaExtension::OnExecute(const char *s) {
             }
         }
 
-        // At this point *something* ran so clear out some data
         chunk.clear();
         isFirstLine = true;
 
         if (status == LUA_OK) {
-            if (lua_gettop(luaState) > 0) {  /* any result to print? */
+            if (lua_gettop(luaState) > 0) {
                 lua_getglobal(luaState, "print");
                 lua_insert(luaState, 1);
                 if (lua_pcall(luaState, lua_gettop(luaState) - 1, 0, 0) != 0)
-                    hostTraceError("error calling " LUA_QL("print"));
+                    hostTraceError("error calling print");
             }
-            // else everything finished fine but had no return value
         }
         else {
-            // Print an error message if possible
             const char *errmsg = lua_tostring(luaState, -1);
             if (errmsg) {
                 hostTraceError(errmsg);
@@ -848,7 +749,24 @@ bool LuaExtension::OnExecute(const char *s) {
                 hostTraceError("error\n");
             }
         }
-        lua_settop(luaState, 0); /* clear stack */
+        lua_settop(luaState, 0);
     }
     return true;
+}
+
+void LuaExtension::CallShortcut(int id) {
+    if (!luaState) return;
+
+    lua_getglobal(luaState, "shortcuts");
+    if (!lua_istable(luaState, -1)) {
+        lua_pop(luaState, 1);
+        return;
+    }
+    lua_rawgeti(luaState, -1, id);
+    lua_remove(luaState, -2);
+    if (lua_isfunction(luaState, -1)) {
+        call_function(luaState, 0, true);
+    } else {
+        lua_pop(luaState, 1);
+    }
 }
