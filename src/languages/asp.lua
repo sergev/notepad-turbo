@@ -16,44 +16,44 @@ L.styles = {
 	["DEFAULT"] = {
 		id = 81,
 		fgColor = rgb(0x8000FF),
-		bgColor = rgb(0xC4F9FD),
+		bgColor = rgb(0x000000),
 	},
 	["COMMENTLINE"] = {
 		id = 82,
 		fgColor = rgb(0x008000),
-		bgColor = rgb(0xC4F9FD),
+		bgColor = rgb(0x000000),
 	},
 	["NUMBER"] = {
 		id = 83,
 		fgColor = rgb(0xFF0000),
-		bgColor = rgb(0xC4F9FD),
+		bgColor = rgb(0x000000),
 	},
 	["WORD"] = {
 		id = 84,
 		fgColor = rgb(0x000080),
-		bgColor = rgb(0xC4F9FD),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["STRING"] = {
 		id = 85,
-		fgColor = rgb(0x808080),
-		bgColor = rgb(0xC4F9FD),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["IDENTIFIER"] = {
 		id = 86,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xC4F9FD),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["ASPSYMBOL"] = {
 		id = 15,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xFFFF00),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["SCRIPTTYPE"] = {
 		id = 16,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xFFC000),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 }
 return L

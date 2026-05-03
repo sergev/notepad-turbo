@@ -17,46 +17,46 @@ L.keywords = {
 L.styles = {
 	["DEFAULT"] = {
 		id = 0,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xFFFFFF),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["COMMENT"] = {
 		id = 1,
 		fgColor = rgb(0x008000),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["KEYWORDS"] = {
 		id = 2,
 		fgColor = rgb(0x0000FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["LABEL"] = {
 		id = 3,
 		fgColor = rgb(0xFF0000),
-		bgColor = rgb(0xFFFF80),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["HIDE SYMBOL"] = {
 		id = 4,
 		fgColor = rgb(0xFF00FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["COMMAND"] = {
 		id = 5,
 		fgColor = rgb(0x0080FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["VARIABLE"] = {
 		id = 6,
 		fgColor = rgb(0xFF8000),
-		bgColor = rgb(0xFCFFF0),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["OPERATOR"] = {
 		id = 7,
 		fgColor = rgb(0xFF0000),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 }

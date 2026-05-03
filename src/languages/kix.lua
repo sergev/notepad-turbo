@@ -15,54 +15,54 @@ L.keywords = {
 L.styles = {
 	["DEFAULT"] = {
 		id = 31,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xFFFFFF),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["COMMENT"] = {
 		id = 1,
 		fgColor = rgb(0x008000),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["STRING"] = {
 		id = 2,
-		fgColor = rgb(0x808080),
-		bgColor = rgb(0xFFFFFF),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["STRING2"] = {
 		id = 3,
-		fgColor = rgb(0x808080),
-		bgColor = rgb(0xFFFFFF),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["NUMBER"] = {
 		id = 4,
 		fgColor = rgb(0xFF8000),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["VAR"] = {
 		id = 5,
-		fgColor = rgb(0x000000),
-		bgColor = rgb(0xFFFFFF),
+		fgColor = rgb(0xa0a0a0),
+		bgColor = rgb(0x000000),
 	},
 	["MACRO"] = {
 		id = 6,
 		fgColor = rgb(0x8000FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["INSTRUCTION WORD"] = {
 		id = 7,
 		fgColor = rgb(0x0000FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 	["FUNCTION"] = {
 		id = 8,
 		fgColor = rgb(0x8000FF),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 	},
 	["OPERATOR"] = {
 		id = 9,
 		fgColor = rgb(0x000080),
-		bgColor = rgb(0xFFFFFF),
+		bgColor = rgb(0x000000),
 		fontStyle = 1,
 	},
 }
