@@ -271,25 +271,25 @@ TPalette &NNApplication::getPalette() const
 {
     static const char appPalette[] = {
         // TBackground.
-        0x71, // 1: fill pattern
+        0x08, // 1: fill pattern
 
         // Shared menu bar, menu box, status line, and indicator colors.
-        0x70, // 2: normal text / first indicator color
-        0x78, // 3: disabled text / second indicator color
-        0x74, // 4: shortcut text
+        0x30, // 2: normal text / first indicator color
+        0x38, // 3: disabled text / second indicator color
+        0x34, // 4: shortcut text
         0x20, // 5: normal selection
         0x28, // 6: disabled selection
         0x24, // 7: shortcut selection
 
-        // Blue TWindow.
-        0x17, // 8: frame passive
-        0x1F, // 9: frame active
-        0x1A, // 10: frame icons
-        0x31, // 11: scroll bar page
-        0x31, // 12: scroll bar controls
-        0x1E, // 13: scroller normal / static text default
-        0x71, // 14: scroller selected
-        0x1F, // 15: reserved
+        // Black TWindow.
+        0x08, // 8: frame passive
+        0x03, // 9: frame active
+        0x0A, // 10: frame icons
+        0x30, // 11: scroll bar page
+        0x30, // 12: scroll bar controls
+        0x0E, // 13: scroller normal / static text default
+        0x70, // 14: scroller selected
+        0x0F, // 15: reserved
 
         // Cyan TWindow.
         0x37, // 16: frame passive
