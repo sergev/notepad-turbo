@@ -13,8 +13,10 @@
 #include "NNEditor.h"
 #include "IniSettings.h"
 #include "LuaState.h"
+#include "LuaExtension.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <filesystem>
 
 NNEditorManager::NNEditorManager(IniSettings *settings)
@@ -55,6 +57,9 @@ std::string NNEditorManager::detectLanguageFromExtension(const std::string &file
     }
     lua_pushstring(L, ext.c_str());
     if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+        const char *err = lua_tostring(L, -1);
+        if (err)
+            fprintf(stderr, "DetectLanguageFromExtension: %s\n", err);
         lua_pop(L, 1);
         return {};
     }
@@ -67,23 +72,26 @@ std::string NNEditorManager::detectLanguageFromExtension(const std::string &file
 
 void NNEditorManager::applyLanguage(NNEditor *editor, const std::string &filePath, LuaState *lua)
 {
-    if (!lua)
+    if (!lua || !editor)
         return;
 
     std::string lang = detectLanguageFromExtension(filePath, lua);
     if (lang.empty())
         return;
 
-    // Call Lua: SetLanguage(editor, langName)
-    // In the original code this calls LuaExtension which routes style calls to the editor.
-    // Here we set the editor as the active IEditorAPI before calling.
+    LuaExtension::Instance().setEditor(editor);
+
     lua_State *L = lua->L;
     lua_getglobal(L, "SetLanguage");
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
         return;
     }
-    // Push language name as string argument
     lua_pushstring(L, lang.c_str());
-    lua_pcall(L, 1, 0, 0);
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        const char *err = lua_tostring(L, -1);
+        if (err)
+            fprintf(stderr, "SetLanguage(%s): %s\n", lang.c_str(), err);
+        lua_pop(L, 1);
+    }
 }

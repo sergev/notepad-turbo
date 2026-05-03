@@ -28,6 +28,11 @@ static int luaRequireLanguage(lua_State *L)
 
     std::ifstream f(path);
     if (!f.is_open()) {
+        // Development layout: init.lua under src/scripts/, *.lua languages under src/languages/
+        path = g_scriptsDir + "/../languages/" + module + ".lua";
+        f.open(path);
+    }
+    if (!f.is_open()) {
         // Also try root of scriptsDir (e.g., init.lua)
         path = g_scriptsDir + "/" + module + ".lua";
         f.open(path);

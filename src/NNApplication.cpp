@@ -30,6 +30,7 @@
 #include "IniSettings.h"
 #include "RecentFilesListManager.h"
 #include "LuaState.h"
+#include "LuaExtension.h"
 
 #include "dialogs/NNFindReplaceDialog.h"
 #include "dialogs/NNGotoLineDialog.h"
@@ -61,6 +62,17 @@ static fs::path scriptsRootFromBase(const fs::path &base)
 
 static std::string resolveDefaultScriptsDir()
 {
+    // Development: repo layout src/scripts/init.lua (run from project root or build/)
+    {
+        const fs::path devSrc = fs::path("src") / "scripts";
+        if (fs::exists(devSrc / "init.lua"))
+            return fs::weakly_canonical(devSrc).string();
+    }
+    {
+        const fs::path fromBuild = fs::path("..") / "src" / "scripts";
+        if (fs::exists(fromBuild / "init.lua"))
+            return fs::weakly_canonical(fromBuild).string();
+    }
     // Development: cwd-relative scripts/ with init.lua
     {
         const fs::path dev = "scripts";
@@ -239,6 +251,7 @@ void NNApplication::initLua()
         scriptDir = resolveDefaultScriptsDir();
 
     lua->setScriptsDir(scriptDir);
+    LuaExtension::Instance().Initialise(lua->L, nullptr);
     lua->executeInitScript();
 }
 

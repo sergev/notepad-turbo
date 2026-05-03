@@ -78,6 +78,14 @@ end
 
 function SetLanguage(languageName)
     local L = languages[languageName]
+    if not L then
+        return
+    end
+
+    -- Lexilla lexer name (e.g. "cpp"); bridges to NNEditor::setLexer via SCI_SETLEXERLANGUAGE
+    if L.lexer and L.lexer ~= "" then
+        editor.LexerLanguage = L.lexer
+    end
 
     if not skip_tabs then
         editor.UseTabs = (L.tabSettings or "tabs") == "tabs"
@@ -190,3 +198,21 @@ languages["Visual Prolog"] = require("visualprolog")
 languages["XML"] = require("xml")
 languages["YAML"] = require("yaml")
 languages["Abaqus"] = require("abaqus")
+
+-- Extension → language display name (requires `languages` to be populated first)
+function DetectLanguageFromExtension(ext)
+    if not ext or ext == "" then
+        return nil
+    end
+    local el = string.lower(ext)
+    for name, Lang in pairs(languages) do
+        if Lang.extensions then
+            for _, e in ipairs(Lang.extensions) do
+                if string.lower(e) == el then
+                    return name
+                end
+            end
+        end
+    end
+    return nil
+end

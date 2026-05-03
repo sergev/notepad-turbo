@@ -14,6 +14,7 @@
 #define Uses_TRect
 #define Uses_TEvent
 #include <tvision/tv.h>
+#include <tvision/colors.h>
 
 #include "NNEditor.h"
 #include "NNDocument.h"
@@ -119,10 +120,10 @@ intptr_t NNEditor::send(unsigned int msg, uintptr_t wParam, intptr_t lParam)
 {
     // Handle the Scintilla-style messages that LuaExtension emits
     switch (msg) {
-        case 2052: // SCI_STYLESETFORE
+        case 2051: // SCI_STYLESETFORE
             styleSetFore((int)wParam, (int)lParam);
             break;
-        case 2051: // SCI_STYLESETBACK
+        case 2052: // SCI_STYLESETBACK
             styleSetBack((int)wParam, (int)lParam);
             break;
         case 2053: // SCI_STYLESETBOLD
@@ -145,6 +146,10 @@ intptr_t NNEditor::send(unsigned int msg, uintptr_t wParam, intptr_t lParam)
             break;
         case 2124: // SCI_SETUSETABS
             setUseTabs(wParam != 0);
+            break;
+        case 4006: // SCI_SETLEXERLANGUAGE
+            if (lParam)
+                setLexer(reinterpret_cast<const char *>(lParam));
             break;
         default:
             break;
@@ -294,6 +299,8 @@ void NNEditor::draw()
     // Draw each visible line with syntax highlighting
     TDrawBuffer b;
     TAttrPair baseColors = getColor(0x0201);
+    // Lexilla/Lua supply RGB backgrounds that become uneven greys in TUI; keep normal-text bg.
+    const TColorAttr baseLineAttr = baseColors[0];
     uint linePtr = drawPtr;
     int count = size.y;
     int y = 0;
@@ -322,6 +329,7 @@ void NNEditor::draw()
                 bool inSelection = (selStart <= P && P < selEnd);
                 if (!inSelection && P < document->styleArray.size()) {
                     TColorAttr syntaxAttr = styleToAttr(document->styleArray[P]);
+                    setBack(syntaxAttr, getBack(baseLineAttr));
                     int charWidth = nextPos - std::max(pos, (int)delta.x);
                     for (int i = x; i < x + charWidth && i < size.x; ++i)
                         b.putAttribute(i, syntaxAttr);
