@@ -4,6 +4,8 @@ A **terminal (TUI) text editor** in the spirit of Notepad++, built with **[Turbo
 
 The application presents itself in-app as **Notepad Turbo** and is implemented as a Turbo Vision `TApplication` with Lexilla-powered highlighting and Lua-driven language definitions.
 
+![screenshot](https://github.com/sergev/notepad-turbo/wiki/images/notepad-turbo.png)
+
 ## Features
 
 - **Multi-document UI**: tile, cascade, next/previous window (see menus in [`src/NNMenus.cpp`](src/NNMenus.cpp)).
