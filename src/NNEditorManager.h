@@ -22,7 +22,7 @@ class LuaState;
 // Tracks open NNWindow instances and provides language detection.
 class NNEditorManager {
 public:
-    explicit NNEditorManager(IniSettings *settings);
+    NNEditorManager();
 
     // Called when a new NNWindow is opened so we can track it
     void trackWindow(NNWindow *window);
@@ -35,7 +35,6 @@ public:
     void applyLanguage(NNEditor *editor, const std::string &filePath, LuaState *lua);
 
 private:
-    IniSettings *settings;
     std::vector<NNWindow*> openWindows;
 
     std::string detectLanguageFromExtension(const std::string &filePath, LuaState *lua);

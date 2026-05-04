@@ -222,7 +222,7 @@ NNApplication::NNApplication(int argc, char **argv)
     recentFiles = std::make_unique<RecentFilesListManager>(settings.get());
     recentFiles->load();
 
-    editorManager = std::make_unique<NNEditorManager>(settings.get());
+    editorManager = std::make_unique<NNEditorManager>();
 
     initLua();
 

@@ -20,8 +20,7 @@
 #include <cstdio>
 #include <filesystem>
 
-NNEditorManager::NNEditorManager(IniSettings *settings)
-    : settings(settings)
+NNEditorManager::NNEditorManager()
 {
 }
 
