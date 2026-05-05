@@ -226,10 +226,10 @@ void NNEditor::replayMacroStep(const NNMacroStep &step)
             if (curPtr < bufLen) setCurPtr(nextChar(curPtr), 0);
             break;
         case NNMacroCmd::LineUp:
-            setCurPtr(lineMove(curPtr, -1), 0);
+            setCurPtr(visibleLineMove(curPtr, -1), 0);
             break;
         case NNMacroCmd::LineDown:
-            setCurPtr(lineMove(curPtr, 1), 0);
+            setCurPtr(visibleLineMove(curPtr, 1), 0);
             break;
         case NNMacroCmd::WordLeft:
             setCurPtr(prevWord(curPtr), 0);
@@ -247,10 +247,10 @@ void NNEditor::replayMacroStep(const NNMacroStep &step)
             setSelect(0, bufLen, True);
             break;
         case NNMacroCmd::PageUp:
-            setCurPtr(lineMove(curPtr, -(size.y - 1)), 0);
+            setCurPtr(visibleLineMove(curPtr, -(size.y - 1)), 0);
             break;
         case NNMacroCmd::PageDown:
-            setCurPtr(lineMove(curPtr, size.y - 1), 0);
+            setCurPtr(visibleLineMove(curPtr, size.y - 1), 0);
             break;
         case NNMacroCmd::Cut:   clipCut(); break;
         case NNMacroCmd::Copy:  clipCopy(); break;
@@ -286,6 +286,52 @@ bool NNEditor::isLineHidden(int line) const noexcept
     return false;
 }
 
+int NNEditor::visibleRowsBetween(int fromLine, int toLine) const noexcept
+{
+    int count = 0;
+    for (int l = fromLine; l < toLine; ++l)
+        if (!isLineHidden(l)) ++count;
+    return count;
+}
+
+uint NNEditor::skipHiddenForward(uint ptr) noexcept
+{
+    while (ptr < bufLen &&
+           isLineHidden((int)document->LineFromPosition((Sci_Position)ptr)))
+        ptr = nextLine(ptr);
+    return ptr;
+}
+
+uint NNEditor::skipHiddenBackward(uint ptr) noexcept
+{
+    uint ls = lineStart(ptr);
+    while (ls > 0 &&
+           isLineHidden((int)document->LineFromPosition((Sci_Position)ls)))
+        ls = lineStart(prevChar(ls));
+    return ls;
+}
+
+uint NNEditor::visibleLineMove(uint ptr, int count) noexcept
+{
+    uint i = ptr;
+    ptr = lineStart(ptr);
+    int pos = charPos(ptr, i);
+    while (count != 0) {
+        if (count < 0) {
+            do { ptr = prevLine(ptr); }
+            while (ptr > 0 &&
+                   isLineHidden((int)document->LineFromPosition((Sci_Position)ptr)));
+            ++count;
+        } else {
+            do { ptr = nextLine(ptr); }
+            while (ptr < bufLen &&
+                   isLineHidden((int)document->LineFromPosition((Sci_Position)ptr)));
+            --count;
+        }
+    }
+    return charPtr(ptr, pos);
+}
+
 int NNEditor::foldEndLine(int startLine) const noexcept
 {
     int startDepth = document->getFoldLevel(startLine) & SC_FOLDLEVELNUMBERMASK;
@@ -310,6 +356,8 @@ void NNEditor::toggleFold()
         collapsedLines.erase(line);
     else
         collapsedLines.insert(line);
+    if (isLineHidden((int)document->LineFromPosition((Sci_Position)curPtr)))
+        setCurPtr(skipHiddenForward(curPtr), 0);
     drawView();
 }
 
@@ -324,6 +372,8 @@ void NNEditor::foldAll(bool collapse)
                 collapsedLines.insert(l);
         }
     }
+    if (isLineHidden((int)document->LineFromPosition((Sci_Position)curPtr)))
+        setCurPtr(skipHiddenForward(curPtr), 0);
     drawView();
 }
 
@@ -438,8 +488,10 @@ void NNEditor::draw()
         ++y;
     }
 
-    // Offset cursor right by gutter width so it never lands on the gutter column.
-    setCursor(curPos.x - (int)delta.x + gutterW, curPos.y - (int)delta.y);
+    // Offset cursor right by gutter width and compute visual row accounting for
+    // hidden lines between the viewport top and the cursor line.
+    int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
+    setCursor(curPos.x - (int)delta.x + gutterW, visRow);
 }
 
 void NNEditor::handleEvent(TEvent &event)
@@ -452,18 +504,89 @@ void NNEditor::handleEvent(TEvent &event)
         return;
     }
 
+    // Intercept PageUp/PageDown to move by visible rows, not buffer rows.
+    // TEditor would call lineMove(curPtr, ±(size.y-1)) which counts all buffer
+    // lines; with hidden folds that traverses far fewer than a page of visible rows.
+    if (!collapsedLines.empty() && event.what == evKeyDown) {
+        ushort key = event.keyDown.keyCode;
+        bool isDown = (key == kbPgDn || key == kbCtrlC);
+        bool isUp   = (key == kbPgUp || key == kbCtrlR);
+        if (isDown || isUp) {
+            uchar selectMode = (event.keyDown.controlKeyState & kbShift) ? smExtend : 0;
+            int rows = isDown ? (size.y - 1) : -(size.y - 1);
+            setCurPtr(visibleLineMove(curPtr, rows), selectMode);
+
+            // trackCursor(False) uses raw buffer-line arithmetic:
+            //   new_delta.y = max(curPos.y - (size.y-1), min(delta.y, curPos.y))
+            // When the cursor jumped over hidden lines, curPos.y is much larger
+            // than delta.y + (size.y-1), so delta.y leaps forward past the fold.
+            // Instead compute delta.y fold-aware: walk back from curPos.y counting
+            // size.y-1 visible lines to find where the viewport top should be.
+            int curLine = (int)curPos.y;
+            int newDelta;
+            if (curLine < (int)delta.y) {
+                // Cursor moved above old viewport top: place cursor at row 0.
+                newDelta = curLine;
+            } else {
+                int visRow = visibleRowsBetween((int)delta.y, curLine);
+                if (visRow < size.y) {
+                    // Cursor is still within the viewport: no scroll needed.
+                    newDelta = (int)delta.y;
+                } else {
+                    // Cursor is below the viewport: place cursor at last visible row.
+                    // Walk backwards from curLine counting size.y-1 visible lines.
+                    int count = 0;
+                    int line = curLine - 1;
+                    while (line >= 0 && count < size.y - 1) {
+                        if (!isLineHidden(line))
+                            count++;
+                        line--;
+                    }
+                    newDelta = std::max(0, line + 1);
+                }
+            }
+            scrollTo((int)delta.x, newDelta);
+
+            drawView();
+            if (lexer) {
+                int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
+                setCursor(curPos.x - (int)delta.x + gutterW, visRow);
+            }
+            clearEvent(event);
+            return;
+        }
+    }
+
     // Shift mouse X by -gutterW so clicks map to the correct text column.
     if (lexer && event.what == evMouseDown)
         event.mouse.where.x = std::max(0, event.mouse.where.x - gutterW);
 
+    uint prevPtr = curPtr;
     TFileEditor::handleEvent(event);
+
+    // Snap cursor off hidden lines (arrow keys, PgUp/Dn, mouse clicks).
+    if (!collapsedLines.empty()) {
+        int curLine = (int)document->LineFromPosition((Sci_Position)curPtr);
+        if (isLineHidden(curLine)) {
+            uint snapped = (curPtr >= prevPtr)
+                ? skipHiddenForward(curPtr)
+                : skipHiddenBackward(curPtr);
+            setCurPtr(snapped, 0);
+        }
+        // TEditor::doUpdate() single-line fast-path (ufLine) calls
+        // drawLines(curPos.y - delta.y, ...) using a raw buffer-line delta,
+        // which puts text at the wrong screen row when hidden lines exist.
+        // Force a full redraw so NNEditor::draw() handles row mapping correctly.
+        drawView();
+    }
 
     // doUpdate() (called from unlock() inside handleEvent) sets the cursor to
     // curPos.x - delta.x, which lands on the gutter for column-0 positions.
-    // Re-apply the gutter offset here; this also covers ufLine updates where
-    // draw() is never called.
-    if (lexer)
-        setCursor(curPos.x - (int)delta.x + gutterW, curPos.y - (int)delta.y);
+    // Re-apply the gutter offset and correct the visual row for hidden lines.
+    if (lexer) {
+        int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
+        setCursor(curPos.x - (int)delta.x + gutterW, visRow);
+    }
 
     // Invalidate syntax highlighting on any text modification
     if (event.what == evBroadcast && modified)

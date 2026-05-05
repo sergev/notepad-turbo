@@ -562,6 +562,7 @@ void NNApplication::showGotoLine()
         NNEditor *ed = win->nnEditor();
         // Navigate to line (1-based)
         uint ptr = ed->lineMove(0, line - 1);
+        ptr = ed->skipHiddenForward(ptr);
         ed->setCurPtr(ptr, 0);
         ed->trackCursor(true);
     }

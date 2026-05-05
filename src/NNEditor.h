@@ -71,6 +71,7 @@ public:
     // --- Fold support ---
     void toggleFold();
     void foldAll(bool collapse);
+    uint skipHiddenForward(uint ptr) noexcept;
 
     // --- Macro support ---
     void setRecorder(MacroRecorder *rec) { recorder = rec; }
@@ -98,6 +99,9 @@ private:
     bool isFoldHeader(int line) const noexcept;
     bool isLineHidden(int line) const noexcept;
     int  foldEndLine(int startLine) const noexcept;
+    int  visibleRowsBetween(int fromLine, int toLine) const noexcept;
+    uint skipHiddenBackward(uint ptr) noexcept;
+    uint visibleLineMove(uint ptr, int count) noexcept;
     void runLexer();
     TColorAttr styleToAttr(uint8_t style) const noexcept;
 };
