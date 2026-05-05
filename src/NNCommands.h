@@ -47,5 +47,9 @@ const int cmNNSortAsc      = 250;
 const int cmNNSortDesc     = 251;
 const int cmNNSortRandom   = 252;
 
+const int cmNNFoldToggle   = 260;
+const int cmNNFoldAll      = 261;
+const int cmNNUnfoldAll    = 262;
+
 // Language selection: cmNNLanguageBase + index into language list
 const int cmNNLanguageBase = 300;

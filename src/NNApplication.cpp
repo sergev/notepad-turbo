@@ -202,6 +202,9 @@ NNApplication::NNApplication(int argc, char **argv)
     ts.enableCmd(cmNNFindNext);
     ts.enableCmd(cmNNFindPrev);
     ts.enableCmd(cmNNGotoLine);
+    ts.enableCmd(cmNNFoldToggle);
+    ts.enableCmd(cmNNFoldAll);
+    ts.enableCmd(cmNNUnfoldAll);
     ts.enableCmd(cmSave);
     ts.enableCmd(cmSaveAs);
     ts.enableCmd(cmCut);
@@ -453,6 +456,9 @@ NNWindow *NNApplication::openEditorWindow(const std::string &path)
     ts.enableCmd(cmNNFindNext);
     ts.enableCmd(cmNNFindPrev);
     ts.enableCmd(cmNNGotoLine);
+    ts.enableCmd(cmNNFoldToggle);
+    ts.enableCmd(cmNNFoldAll);
+    ts.enableCmd(cmNNUnfoldAll);
     ts.enableCmd(cmSave);
     ts.enableCmd(cmSaveAs);
     ts.enableCmd(cmCut);
@@ -634,6 +640,21 @@ void NNApplication::handleEvent(TEvent &event)
         case cmNNGotoLine: showGotoLine();        break;
         case cmNNPreferences: showPreferences();  break;
         case cmNNAbout:    showAbout();           break;
+        case cmNNFoldToggle: {
+            NNWindow *win = currentWindow();
+            if (win) win->nnEditor()->toggleFold();
+            break;
+        }
+        case cmNNFoldAll: {
+            NNWindow *win = currentWindow();
+            if (win) win->nnEditor()->foldAll(true);
+            break;
+        }
+        case cmNNUnfoldAll: {
+            NNWindow *win = currentWindow();
+            if (win) win->nnEditor()->foldAll(false);
+            break;
+        }
         default:
             return;
     }

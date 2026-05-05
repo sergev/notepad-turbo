@@ -58,7 +58,11 @@ TMenuBar *createNNMenuBar(TRect r)
 
     TSubMenu &viewMenu = *new TSubMenu("~V~iew", kbAltV) +
         *new TMenuItem("~W~ord Wrap",     cmNNWordWrap,   kbNoKey) +
-        *new TMenuItem("~W~hitespace",    cmNNWhitespace, kbNoKey);
+        *new TMenuItem("~W~hitespace",    cmNNWhitespace, kbNoKey) +
+        newLine() +
+        *new TMenuItem("Toggle ~F~old",   cmNNFoldToggle, kbAltMinus, hcNoContext, "Alt--") +
+        *new TMenuItem("Fold ~A~ll",      cmNNFoldAll,    kbNoKey) +
+        *new TMenuItem("~U~nfold All",    cmNNUnfoldAll,  kbNoKey);
 
     TSubMenu &toolsMenu = *new TSubMenu("~T~ools", kbAltT) +
         *new TMenuItem("~P~references...", cmNNPreferences, kbNoKey) +

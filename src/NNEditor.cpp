@@ -14,6 +14,8 @@
 #define Uses_TDrawBuffer
 #define Uses_TRect
 #define Uses_TEvent
+#define Uses_TKeys
+#define Uses_TGroup
 #include <tvision/tv.h>
 #include <tvision/colors.h>
 
@@ -26,9 +28,14 @@
 #include "ILexer.h"
 #include "SciLexer.h"
 
+#include "Scintilla.h"
+#include "NNCommands.h"
+
 #include <cstring>
 #include <algorithm>
 #include <climits>
+
+static constexpr int gutterW = 1; // width of the fold gutter column
 
 NNEditor::NNEditor(const TRect &bounds,
                    TScrollBar *hScrollBar,
@@ -111,7 +118,7 @@ void NNEditor::setLexer(const char *languageName)
 
         lexer = CreateLexer(languageName);
         if (lexer) {
-            lexer->PropertySet("fold", "0");
+            lexer->PropertySet("fold", "1");
         }
     }
     invalidateStyles();
@@ -265,6 +272,61 @@ TColorAttr NNEditor::styleToAttr(uint8_t style) const noexcept
     return styleMap[style].attr;
 }
 
+bool NNEditor::isFoldHeader(int line) const noexcept
+{
+    return (document->getFoldLevel(line) & SC_FOLDLEVELHEADERFLAG) != 0;
+}
+
+bool NNEditor::isLineHidden(int line) const noexcept
+{
+    for (int h : collapsedLines) {
+        if (line > h && line <= foldEndLine(h))
+            return true;
+    }
+    return false;
+}
+
+int NNEditor::foldEndLine(int startLine) const noexcept
+{
+    int startDepth = document->getFoldLevel(startLine) & SC_FOLDLEVELNUMBERMASK;
+    int totalLines = (int)document->LineFromPosition((Sci_Position)bufLen);
+    int last = startLine;
+    for (int l = startLine + 1; l <= totalLines; ++l) {
+        int depth = document->getFoldLevel(l) & SC_FOLDLEVELNUMBERMASK;
+        if (depth > startDepth)
+            last = l;
+        else
+            break;
+    }
+    return last;
+}
+
+void NNEditor::toggleFold()
+{
+    if (!lexer) return;
+    int line = (int)document->LineFromPosition((Sci_Position)curPtr);
+    if (!isFoldHeader(line)) return;
+    if (collapsedLines.count(line))
+        collapsedLines.erase(line);
+    else
+        collapsedLines.insert(line);
+    drawView();
+}
+
+void NNEditor::foldAll(bool collapse)
+{
+    if (!lexer) return;
+    int totalLines = (int)document->LineFromPosition((Sci_Position)bufLen);
+    collapsedLines.clear();
+    if (collapse) {
+        for (int l = 0; l <= totalLines; ++l) {
+            if (isFoldHeader(l))
+                collapsedLines.insert(l);
+        }
+    }
+    drawView();
+}
+
 void NNEditor::runLexer()
 {
     if (!lexDirty || !lexer)
@@ -278,6 +340,7 @@ void NNEditor::runLexer()
 
     document->styleArray.assign(len, 0);
     lexer->Lex(0, len, 0, document.get());
+    lexer->Fold(0, len, 0, document.get());
     lexDirty = false;
 }
 
@@ -297,26 +360,49 @@ void NNEditor::draw()
 
     runLexer();
 
-    // Draw each visible line with syntax highlighting
-    TDrawBuffer b;
+    // Draw each visible line with syntax highlighting and a 1-column fold gutter.
+    // The gutter (column 0) shows ⊟ for expanded fold headers, ⊞ for collapsed,
+    // and ' ' for non-foldable lines. Text is rendered in columns 1..size.x-1.
+    // Lines inside a collapsed fold are skipped entirely.
+    const int textW = size.x - gutterW;
+
+    TDrawBuffer textBuf;
+    TDrawBuffer gutterBuf;
     TAttrPair baseColors = getColor(0x0201);
     // Lexilla/Lua supply RGB backgrounds that become uneven greys in TUI; keep normal-text bg.
     const TColorAttr baseLineAttr = baseColors[0];
+
+    // Gutter symbols use the window's passive frame color.
+    TAttrPair frameColors = owner ? owner->getColor(0x0201) : TAttrPair{baseLineAttr, baseLineAttr};
+    const TColorAttr gutterAttr = frameColors[0];
+
+    // If drawPtr lands inside a collapsed fold (e.g. after scrolling), skip forward.
     uint linePtr = drawPtr;
+    while (linePtr < bufLen &&
+           isLineHidden((int)document->LineFromPosition((Sci_Position)linePtr)))
+        linePtr = nextLine(linePtr);
+
     int count = size.y;
     int y = 0;
 
     while (count-- > 0) {
-        // First pass: use TEditor's formatLine for text layout (tab expansion, unicode, etc.)
-        formatLine(b, linePtr, delta.x, size.x, baseColors);
+        // --- Gutter ---
+        int bufLine = (int)document->LineFromPosition((Sci_Position)linePtr);
+        const char *gutterStr = " ";
+        if (isFoldHeader(bufLine))
+            gutterStr = collapsedLines.count(bufLine) ? "⊞" : "⊟";
+        gutterBuf.moveStr(0, gutterStr, gutterAttr);
+        writeBuf(0, y, gutterW, 1, gutterBuf);
 
-        // Second pass: apply per-character syntax colors
-        // Walk the same way formatLine does, computing screen x positions
+        // --- Text: first pass via formatLine (tab expansion, unicode, selection) ---
+        formatLine(textBuf, linePtr, delta.x, textW, baseColors);
+
+        // --- Text: second pass — per-character syntax colors ---
         uint P = linePtr;
         int pos = 0;
         int x = 0;
 
-        while (P < bufLen && x < size.x) {
+        while (P < bufLen && x < textW) {
             uint nextP = P;
             int nextPos = pos;
             nextCharAndPos(nextP, nextPos);
@@ -326,14 +412,13 @@ void NNEditor::draw()
                 break;
 
             if (nextPos > (int)delta.x) {
-                // Don't override the selection highlight
                 bool inSelection = (selStart <= P && P < selEnd);
                 if (!inSelection && P < document->styleArray.size()) {
                     TColorAttr syntaxAttr = styleToAttr(document->styleArray[P]);
                     setBack(syntaxAttr, getBack(baseLineAttr));
                     int charWidth = nextPos - std::max(pos, (int)delta.x);
-                    for (int i = x; i < x + charWidth && i < size.x; ++i)
-                        b.putAttribute(i, syntaxAttr);
+                    for (int i = x; i < x + charWidth && i < textW; ++i)
+                        textBuf.putAttribute(i, syntaxAttr);
                 }
                 x += nextPos - std::max(pos, (int)delta.x);
             }
@@ -342,15 +427,44 @@ void NNEditor::draw()
             pos = nextPos;
         }
 
-        writeBuf(0, y, size.x, 1, b);
+        writeBuf(gutterW, y, textW, 1, textBuf);
+
+        // Advance to next visible line, skipping any hidden inside a collapsed fold.
         linePtr = nextLine(linePtr);
+        while (linePtr < bufLen &&
+               isLineHidden((int)document->LineFromPosition((Sci_Position)linePtr)))
+            linePtr = nextLine(linePtr);
+
         ++y;
     }
+
+    // Offset cursor right by gutter width so it never lands on the gutter column.
+    setCursor(curPos.x - (int)delta.x + gutterW, curPos.y - (int)delta.y);
 }
 
 void NNEditor::handleEvent(TEvent &event)
 {
+    // TEditor::handleEvent unconditionally clears all keydown events, so fold
+    // shortcuts must be intercepted here before the base class consumes them.
+    if (event.what == evKeyDown && event.keyDown.keyCode == kbAltMinus) {
+        toggleFold();
+        clearEvent(event);
+        return;
+    }
+
+    // Shift mouse X by -gutterW so clicks map to the correct text column.
+    if (lexer && event.what == evMouseDown)
+        event.mouse.where.x = std::max(0, event.mouse.where.x - gutterW);
+
     TFileEditor::handleEvent(event);
+
+    // doUpdate() (called from unlock() inside handleEvent) sets the cursor to
+    // curPos.x - delta.x, which lands on the gutter for column-0 positions.
+    // Re-apply the gutter offset here; this also covers ufLine updates where
+    // draw() is never called.
+    if (lexer)
+        setCursor(curPos.x - (int)delta.x + gutterW, curPos.y - (int)delta.y);
+
     // Invalidate syntax highlighting on any text modification
     if (event.what == evBroadcast && modified)
         invalidateStyles();

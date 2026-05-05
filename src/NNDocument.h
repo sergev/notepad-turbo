@@ -54,6 +54,8 @@ public:
     // Called when the buffer content changes — invalidates flat buffer cache
     void onBufferChanged(Sci_Position firstChanged);
 
+    int getFoldLevel(int line) const noexcept { return GetLevel(line); }
+
     // The style array: indexed by logical text position
     std::vector<uint8_t> styleArray;
 

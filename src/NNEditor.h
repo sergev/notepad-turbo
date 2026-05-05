@@ -23,6 +23,7 @@
 
 #include <array>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -67,6 +68,10 @@ public:
     void replaceSelection(const std::string &text);
     void replaceAll(const std::string &newContent);
 
+    // --- Fold support ---
+    void toggleFold();
+    void foldAll(bool collapse);
+
     // --- Macro support ---
     void setRecorder(MacroRecorder *rec) { recorder = rec; }
     void replayMacroStep(const NNMacroStep &step);
@@ -86,9 +91,13 @@ private:
     MacroRecorder *recorder = nullptr;
 
     std::array<StyleEntry, 256> styleMap{};
+    std::set<int> collapsedLines;
 
     bool lexDirty = true;
 
+    bool isFoldHeader(int line) const noexcept;
+    bool isLineHidden(int line) const noexcept;
+    int  foldEndLine(int startLine) const noexcept;
     void runLexer();
     TColorAttr styleToAttr(uint8_t style) const noexcept;
 };
