@@ -70,8 +70,11 @@ public:
 
     // --- Fold support ---
     void toggleFold();
+    void toggleFoldLine(int line);
     void foldAll(bool collapse);
     uint skipHiddenForward(uint ptr) noexcept;
+    int  foldMarkerAtRow(int visRow) const noexcept;
+    int  lineAtRow(int visRow) const noexcept;
 
     // --- Macro support ---
     void setRecorder(MacroRecorder *rec) { recorder = rec; }

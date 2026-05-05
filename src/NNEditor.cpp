@@ -16,6 +16,8 @@
 #define Uses_TEvent
 #define Uses_TKeys
 #define Uses_TGroup
+#define Uses_TWindow
+#define Uses_TFrame
 #include <tvision/tv.h>
 #include <tvision/colors.h>
 
@@ -35,7 +37,6 @@
 #include <algorithm>
 #include <climits>
 
-static constexpr int gutterW = 1; // width of the fold gutter column
 
 NNEditor::NNEditor(const TRect &bounds,
                    TScrollBar *hScrollBar,
@@ -361,6 +362,51 @@ void NNEditor::toggleFold()
     drawView();
 }
 
+void NNEditor::toggleFoldLine(int line)
+{
+    if (!lexer || !isFoldHeader(line)) return;
+    if (collapsedLines.count(line))
+        collapsedLines.erase(line);
+    else
+        collapsedLines.insert(line);
+    if (isLineHidden((int)document->LineFromPosition((Sci_Position)curPtr)))
+        setCurPtr(skipHiddenForward(curPtr), 0);
+    drawView();
+}
+
+int NNEditor::foldMarkerAtRow(int visRow) const noexcept
+{
+    int line = (int)delta.y;
+    int totalLines = (int)document->LineFromPosition((Sci_Position)bufLen);
+    int row = 0;
+    while (line <= totalLines) {
+        if (!isLineHidden(line)) {
+            if (row == visRow) {
+                if (!isFoldHeader(line)) return 0;
+                return collapsedLines.count(line) ? -1 : 1;
+            }
+            ++row;
+        }
+        ++line;
+    }
+    return 0;
+}
+
+int NNEditor::lineAtRow(int visRow) const noexcept
+{
+    int line = (int)delta.y;
+    int totalLines = (int)document->LineFromPosition((Sci_Position)bufLen);
+    int row = 0;
+    while (line <= totalLines) {
+        if (!isLineHidden(line)) {
+            if (row == visRow) return line;
+            ++row;
+        }
+        ++line;
+    }
+    return -1;
+}
+
 void NNEditor::foldAll(bool collapse)
 {
     if (!lexer) return;
@@ -410,21 +456,14 @@ void NNEditor::draw()
 
     runLexer();
 
-    // Draw each visible line with syntax highlighting and a 1-column fold gutter.
-    // The gutter (column 0) shows ⊟ for expanded fold headers, ⊞ for collapsed,
-    // and ' ' for non-foldable lines. Text is rendered in columns 1..size.x-1.
+    // Draw each visible line with syntax highlighting.
     // Lines inside a collapsed fold are skipped entirely.
-    const int textW = size.x - gutterW;
+    const int textW = size.x;
 
     TDrawBuffer textBuf;
-    TDrawBuffer gutterBuf;
     TAttrPair baseColors = getColor(0x0201);
     // Lexilla/Lua supply RGB backgrounds that become uneven greys in TUI; keep normal-text bg.
     const TColorAttr baseLineAttr = baseColors[0];
-
-    // Gutter symbols use the window's passive frame color.
-    TAttrPair frameColors = owner ? owner->getColor(0x0201) : TAttrPair{baseLineAttr, baseLineAttr};
-    const TColorAttr gutterAttr = frameColors[0];
 
     // If drawPtr lands inside a collapsed fold (e.g. after scrolling), skip forward.
     uint linePtr = drawPtr;
@@ -436,14 +475,6 @@ void NNEditor::draw()
     int y = 0;
 
     while (count-- > 0) {
-        // --- Gutter ---
-        int bufLine = (int)document->LineFromPosition((Sci_Position)linePtr);
-        const char *gutterStr = " ";
-        if (isFoldHeader(bufLine))
-            gutterStr = collapsedLines.count(bufLine) ? "⊞" : "⊟";
-        gutterBuf.moveStr(0, gutterStr, gutterAttr);
-        writeBuf(0, y, gutterW, 1, gutterBuf);
-
         // --- Text: first pass via formatLine (tab expansion, unicode, selection) ---
         formatLine(textBuf, linePtr, delta.x, textW, baseColors);
 
@@ -477,7 +508,7 @@ void NNEditor::draw()
             pos = nextPos;
         }
 
-        writeBuf(gutterW, y, textW, 1, textBuf);
+        writeBuf(0, y, textW, 1, textBuf);
 
         // Advance to next visible line, skipping any hidden inside a collapsed fold.
         linePtr = nextLine(linePtr);
@@ -488,10 +519,13 @@ void NNEditor::draw()
         ++y;
     }
 
-    // Offset cursor right by gutter width and compute visual row accounting for
-    // hidden lines between the viewport top and the cursor line.
+    // Compute visual row accounting for hidden lines between viewport top and cursor.
     int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
-    setCursor(curPos.x - (int)delta.x + gutterW, visRow);
+    setCursor(curPos.x - (int)delta.x, visRow);
+
+    // Keep frame fold markers in sync with the current viewport.
+    if (owner && ((TWindow*)owner)->frame)
+        ((TWindow*)owner)->frame->drawView();
 }
 
 void NNEditor::handleEvent(TEvent &event)
@@ -550,16 +584,12 @@ void NNEditor::handleEvent(TEvent &event)
             drawView();
             if (lexer) {
                 int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
-                setCursor(curPos.x - (int)delta.x + gutterW, visRow);
+                setCursor(curPos.x - (int)delta.x, visRow);
             }
             clearEvent(event);
             return;
         }
     }
-
-    // Shift mouse X by -gutterW so clicks map to the correct text column.
-    if (lexer && event.what == evMouseDown)
-        event.mouse.where.x = std::max(0, event.mouse.where.x - gutterW);
 
     uint prevPtr = curPtr;
     TFileEditor::handleEvent(event);
@@ -581,11 +611,10 @@ void NNEditor::handleEvent(TEvent &event)
     }
 
     // doUpdate() (called from unlock() inside handleEvent) sets the cursor to
-    // curPos.x - delta.x, which lands on the gutter for column-0 positions.
-    // Re-apply the gutter offset and correct the visual row for hidden lines.
+    // curPos.x - delta.x; correct the visual row for hidden lines.
     if (lexer) {
         int visRow = visibleRowsBetween((int)delta.y, (int)curPos.y);
-        setCursor(curPos.x - (int)delta.x + gutterW, visRow);
+        setCursor(curPos.x - (int)delta.x, visRow);
     }
 
     // Invalidate syntax highlighting on any text modification

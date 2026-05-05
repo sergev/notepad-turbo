@@ -12,6 +12,7 @@
 #pragma once
 
 #define Uses_TEditWindow
+#define Uses_TFrame
 #define Uses_TRect
 #define Uses_TEvent
 #include <tvision/tv.h>
@@ -30,6 +31,8 @@ public:
     void close() override;
 
     NNEditor *nnEditor() const;
+
+    static TFrame *initFrame(TRect r);
 
     // Tracks modification state for title asterisk
     bool wasModified = false;
