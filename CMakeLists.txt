@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 project(NotepadTurbo
     VERSION 0.14
     DESCRIPTION "Cross-platform text editor (TUI)"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,6 +32,8 @@ FetchContent_Declare(
     EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(tvision)
+
+enable_testing()
 
 add_subdirectory(thirdparty)
 add_subdirectory(src)

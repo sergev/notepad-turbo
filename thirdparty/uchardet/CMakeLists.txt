@@ -10,3 +10,6 @@ add_library(uchardet STATIC
 target_include_directories(uchardet PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
+
+set(UCHARDET_LIBRARY uchardet)
+add_subdirectory(test)

@@ -28,3 +28,5 @@ target_include_directories(lexilla
 if(UNIX)
     target_link_libraries(lexilla PUBLIC dl)
 endif()
+
+add_subdirectory(test/unit)

@@ -1,3 +1,22 @@
+#
+# TUI-independent core library (no Turbo Vision dependency).
+# Linked by unit_tests and the nt executable.
+#
+add_library(nt_core STATIC
+    ITextBuffer.h
+    IniSettings.h         IniSettings.cpp
+    Sorter.h              Sorter.cpp
+    SessionManager.h      SessionManager.cpp
+    RecentFilesListManager.h RecentFilesListManager.cpp
+    MacroStep.h           MacroStep.cpp
+    Macro.h               Macro.cpp
+    MacroRecorder.h       MacroRecorder.cpp
+    MacroManager.h        MacroManagerSettings.cpp
+    Finder.h              Finder.cpp
+)
+
+target_include_directories(nt_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_executable(nt
     main.cpp
 
@@ -14,11 +33,6 @@ add_executable(nt
     NNWindow.h NNWindow.cpp
     NNEditorManager.h NNEditorManager.cpp
 
-    # Settings & persistence
-    IniSettings.h IniSettings.cpp
-    RecentFilesListManager.h RecentFilesListManager.cpp
-    SessionManager.h SessionManager.cpp
-
     # Lua language system
     LuaState.h LuaState.cpp
     LuaExtension.h LuaExtension.cpp
@@ -26,17 +40,9 @@ add_executable(nt
     IFaceTableMixer.h IFaceTableMixer.cpp
     SciIFaceTable.h SciIFaceTable.cpp
 
-    # Search
-    Finder.h Finder.cpp
-
-    # Sorting
-    Sorter.h Sorter.cpp
-
-    # Macros
-    Macro.h Macro.cpp
-    MacroStep.h MacroStep.cpp
+    # Macros (TUI-dependent replay)
+    MacroReplay.cpp
     MacroManager.h MacroManager.cpp
-    MacroRecorder.h MacroRecorder.cpp
 
     # Dialogs
     dialogs/NNFindReplaceDialog.h dialogs/NNFindReplaceDialog.cpp
@@ -57,6 +63,7 @@ target_include_directories(nt
 
 target_link_libraries(nt
     PRIVATE
+        nt_core
         tvision::tvision
         lexilla
         lua

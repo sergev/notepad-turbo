@@ -10,7 +10,6 @@
  */
 
 #include "Macro.h"
-#include "NNEditor.h"
 
 Macro::Macro() : name("<Current Recorded Macro>") {}
 
@@ -27,38 +26,4 @@ void Macro::addStep(NNMacroCmd cmd, const std::string &text)
 void Macro::addStep(NNMacroStep step)
 {
     steps.push_back(std::move(step));
-}
-
-void Macro::replay(NNEditor *editor, int n) const
-{
-    while (n > 0) {
-        for (const NNMacroStep &step : steps) {
-            editor->replayMacroStep(step);
-        }
-        --n;
-    }
-}
-
-void Macro::replayTillEndOfFile(NNEditor *editor) const
-{
-    do {
-        int lengthBefore = editor->textLength();
-        int posBefore = editor->cursorPos();
-
-        replay(editor);
-
-        int lengthAfter = editor->textLength();
-        int posAfter = editor->cursorPos();
-
-        if (lengthAfter < lengthBefore) continue;
-        if (lengthAfter > lengthBefore) {
-            int deltaLen = lengthAfter - lengthBefore;
-            int deltaPos = posAfter - posBefore;
-            if (deltaPos > deltaLen) continue;
-        } else {
-            if (posAfter != posBefore) continue;
-        }
-
-        break;
-    } while (true);
 }

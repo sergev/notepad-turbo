@@ -14,8 +14,8 @@ all:    build
 	$(MAKE) -Cbuild $@
 
 test:   build
-	$(MAKE) -Cbuild unit_tests
-	ctest --test-dir build/test
+	$(MAKE) -Cbuild unit_tests lexilla_unit_tests uchardet-tests
+	ctest --test-dir build --output-on-failure
 
 install: build
 	$(MAKE) -Cbuild $@

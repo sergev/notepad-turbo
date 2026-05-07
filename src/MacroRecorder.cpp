@@ -10,22 +10,14 @@
  */
 
 #include "MacroRecorder.h"
-#include "NNEditor.h"
 
-void MacroRecorder::startRecording(NNEditor *editor_)
+void MacroRecorder::startRecording()
 {
-    editor = editor_;
     macro = new Macro();
-    editor->setRecorder(this);
 }
 
 Macro *MacroRecorder::stopRecording()
 {
-    if (editor) {
-        editor->setRecorder(nullptr);
-        editor = nullptr;
-    }
-
     Macro *m = macro;
     macro = nullptr;
     return m;

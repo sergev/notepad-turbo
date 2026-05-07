@@ -44,6 +44,7 @@ public:
 
 private:
     MacroRecorder recorder;
+    NNEditor *activeEditor = nullptr;
     Macro *currentMacro = nullptr;
     std::vector<Macro *> macros;
     bool _isRecording = false;

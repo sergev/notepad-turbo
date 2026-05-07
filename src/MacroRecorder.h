@@ -13,18 +13,15 @@
 
 #include "Macro.h"
 
-class NNEditor;
-
 class MacroRecorder
 {
 public:
     MacroRecorder() = default;
 
-    void startRecording(NNEditor *editor);
+    void startRecording();
     Macro *stopRecording();
     void recordStep(NNMacroCmd cmd, const std::string &text = {});
 
 private:
-    NNEditor *editor = nullptr;
     Macro *macro = nullptr;
 };

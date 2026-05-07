@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "ITextBuffer.h"
 #include <string>
 #include <functional>
 
@@ -26,14 +27,12 @@ struct FindRange {
     bool valid() const { return start >= 0; }
 };
 
-class NNEditor;
-
 class Finder
 {
 public:
-    explicit Finder(NNEditor *edit);
+    explicit Finder(ITextBuffer *buffer);
 
-    void setEditor(NNEditor *editor);
+    void setBuffer(ITextBuffer *buffer);
     void setSearchFlags(int flags);
     void setWrap(bool wrap);
     void setSearchText(const std::string &text);
@@ -53,7 +52,7 @@ private:
     FindRange searchForward(int from, int to);
     FindRange searchBackward(int from, int to);
 
-    NNEditor *editor;
+    ITextBuffer *buffer;
     bool did_latest_search_wrap = false;
     bool wrap = false;
     int search_flags = 0;

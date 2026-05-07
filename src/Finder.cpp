@@ -10,14 +10,13 @@
  */
 
 #include "Finder.h"
-#include "NNEditor.h"
 #include <regex>
 #include <algorithm>
 #include <cctype>
 
-Finder::Finder(NNEditor *edit) : editor(edit) {}
+Finder::Finder(ITextBuffer *buf) : buffer(buf) {}
 
-void Finder::setEditor(NNEditor *editor_) { editor = editor_; }
+void Finder::setBuffer(ITextBuffer *buf) { buffer = buf; }
 void Finder::setSearchFlags(int flags)    { search_flags = flags; }
 void Finder::setWrap(bool wrap_)          { wrap = wrap_; }
 void Finder::setSearchText(const std::string &text_) { text = text_; }
@@ -54,7 +53,7 @@ static FindRange literalSearchBackward(const std::string &haystack, const std::s
 
 FindRange Finder::searchForward(int from, int to)
 {
-    std::string content = editor->flatText();
+    std::string content = buffer->flatText();
     if (to < 0 || to > (int)content.size()) to = (int)content.size();
     bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
 
@@ -78,7 +77,7 @@ FindRange Finder::searchForward(int from, int to)
 
 FindRange Finder::searchBackward(int from, int to)
 {
-    std::string content = editor->flatText();
+    std::string content = buffer->flatText();
     if (to < 0 || to > (int)content.size()) to = (int)content.size();
     bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
     return literalSearchBackward(content, text, from, to, caseSens);
@@ -89,7 +88,7 @@ FindRange Finder::findNext(int startPos)
     did_latest_search_wrap = false;
     if (text.empty()) return {};
 
-    int pos = startPos < 0 ? editor->selectionEnd() : startPos;
+    int pos = startPos < 0 ? buffer->selectionEnd() : startPos;
     FindRange r = searchForward(pos, -1);
     if (r.valid()) return r;
     if (wrap) {
@@ -104,7 +103,7 @@ FindRange Finder::findPrev()
     did_latest_search_wrap = false;
     if (text.empty()) return {};
 
-    int pos = editor->selectionStart();
+    int pos = buffer->selectionStart();
     FindRange r = searchBackward(0, pos);
     if (r.valid()) return r;
     if (wrap) {
@@ -123,7 +122,7 @@ int Finder::count()
 
 void Finder::forEachMatch(std::function<int(int start, int end)> callback)
 {
-    std::string content = editor->flatText();
+    std::string content = buffer->flatText();
     int len = (int)content.size();
     bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
 
@@ -156,15 +155,15 @@ void Finder::forEachMatch(std::function<int(int start, int end)> callback)
 
 FindRange Finder::replaceSelectionIfMatch(const std::string &replaceText)
 {
-    int selStart = editor->selectionStart();
-    int selEnd   = editor->selectionEnd();
-    std::string content = editor->flatText();
+    int selStart = buffer->selectionStart();
+    int selEnd   = buffer->selectionEnd();
+    std::string content = buffer->flatText();
     bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
 
     FindRange r = literalSearch(content, text, selStart, selEnd, caseSens);
     if (!r.valid() || r.start != selStart || r.end != selEnd) return {};
 
-    editor->replaceSelection(replaceText);
+    buffer->replaceSelection(replaceText);
     return { selStart, selStart + (int)replaceText.size() };
 }
 
@@ -172,7 +171,7 @@ int Finder::replaceAll(const std::string &replaceText)
 {
     if (text.empty()) return 0;
 
-    std::string content = editor->flatText();
+    std::string content = buffer->flatText();
     bool caseSens = (search_flags & FIND_MATCHCASE) != 0;
     std::string result;
     int total = 0;
@@ -201,6 +200,6 @@ int Finder::replaceAll(const std::string &replaceText)
         if (pos >= len && total == 0) return 0;
     }
 
-    if (total > 0) editor->replaceAll(result);
+    if (total > 0) buffer->replaceAll(result);
     return total;
 }

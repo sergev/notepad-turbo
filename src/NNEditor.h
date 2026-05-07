@@ -18,6 +18,7 @@
 #include <tvision/tv.h>
 
 #include "IEditorAPI.h"
+#include "ITextBuffer.h"
 #include "MacroStep.h"
 #include "ILexer.h"
 
@@ -33,7 +34,7 @@ class MacroRecorder;
 // TFileEditor subclass with Lexilla-based syntax highlighting.
 // Overrides draw() to apply per-character ANSI color attributes
 // based on Lexilla style tokens.
-class NNEditor : public TFileEditor, public IEditorAPI {
+class NNEditor : public TFileEditor, public IEditorAPI, public ITextBuffer {
 public:
     NNEditor(const TRect &bounds,
              TScrollBar *hScrollBar,
@@ -59,14 +60,14 @@ public:
     void draw() override;
     void handleEvent(TEvent &event) override;
 
-    // --- Text access (gap-buffer aware) ---
-    std::string flatText() const;
+    // --- Text access (gap-buffer aware) / ITextBuffer ---
+    std::string flatText() const override;
     int textLength() const { return (int)bufLen; }
     int cursorPos() const  { return (int)curPtr; }
-    int selectionStart() const;
-    int selectionEnd() const;
-    void replaceSelection(const std::string &text);
-    void replaceAll(const std::string &newContent);
+    int selectionStart() const override;
+    int selectionEnd() const override;
+    void replaceSelection(const std::string &text) override;
+    void replaceAll(const std::string &newContent) override;
 
     // --- Fold support ---
     void toggleFold();
