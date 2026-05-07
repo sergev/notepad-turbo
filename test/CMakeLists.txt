@@ -35,6 +35,7 @@ set(UI_TEST_SOURCES
     nn_editor_test.cpp
     nn_window_test.cpp
     nn_document_test.cpp
+    nn_idocument_test.cpp
 )
 
 add_executable(ui_tests EXCLUDE_FROM_ALL ${UI_TEST_SOURCES})

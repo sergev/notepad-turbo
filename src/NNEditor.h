@@ -55,6 +55,7 @@ public:
     void setLexer(const char *languageName) override;
     const char *getFileName() const override { return fileName; }
     intptr_t send(unsigned int msg, uintptr_t wParam, intptr_t lParam) override;
+    NNDocument *nnDocument() const { return document.get(); }
 
     // --- TView overrides ---
     void draw() override;
