@@ -63,5 +63,5 @@ Managed by CMake FetchContent (not vendored except `thirdparty/`):
 
 ### Naming Conventions
 
-- Classes prefixed with `NN` are application-level (NotepadNext-Turbo origin)
+- Classes prefixed with `NN` are application-level
 - Language `.lua` files are the primary extension point for adding new syntax support — no C++ changes needed

@@ -8,13 +8,14 @@
 #
 # make clean    -- remove build files
 #
+.PHONY: all install clean test debug
 
 all:    build
 	$(MAKE) -Cbuild $@
 
 test:   build
 	$(MAKE) -Cbuild unit_tests
-	ctest --test-dir build/tests
+	ctest --test-dir build/test
 
 install: build
 	$(MAKE) -Cbuild $@
