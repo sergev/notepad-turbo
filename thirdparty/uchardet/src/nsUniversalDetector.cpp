@@ -156,6 +156,27 @@ nsresult nsUniversalDetector::HandleData(const char* aBuf, PRUint32 aLen)
         }
     }
 
+    if (!mDetectedCharset)
+    {
+      /* No BOM found. Detect UTF-16 without BOM by looking for null-byte parity.
+       * UTF-16LE: high bytes (odd positions) are ~zero for ASCII-range codepoints.
+       * UTF-16BE: low bytes (even positions) are ~zero for ASCII-range codepoints. */
+      PRUint32 even_null = 0, odd_null = 0;
+      for (PRUint32 j = 0; j + 1 < aLen; j += 2)
+      {
+        if (aBuf[j]   == '\x00') ++even_null;
+        if (aBuf[j+1] == '\x00') ++odd_null;
+      }
+      PRUint32 total_nulls = even_null + odd_null;
+      if (total_nulls * 4 > aLen && total_nulls >= 4)
+      {
+        if (odd_null > even_null * 10)
+          mDetectedCharset = "UTF-16LE";
+        else if (even_null > odd_null * 10)
+          mDetectedCharset = "UTF-16BE";
+      }
+    }
+
     if (mDetectedCharset)
     {
         mDone = PR_TRUE;
