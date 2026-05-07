@@ -17,20 +17,35 @@ add_library(nt_core STATIC
 
 target_include_directories(nt_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+#
+# TUI editor library: NNEditor + NNDocument + NNWindow.
+# Depends on tvision::tvision and lexilla (no Lua).
+# Linked by both nt executable and ui_tests.
+#
+add_library(nt_ui STATIC
+    NNCommands.h
+    IEditorAPI.h
+    NNEditor.h      NNEditor.cpp
+    NNDocument.h    NNDocument.cpp
+    NNWindow.h      NNWindow.cpp
+)
+target_include_directories(nt_ui PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/thirdparty/scintilla/include
+    ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/include
+    ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/access
+)
+target_link_libraries(nt_ui PUBLIC nt_core tvision::tvision lexilla)
+
 add_executable(nt
     main.cpp
 
     # Application
     NNApplication.h NNApplication.cpp
-    NNCommands.h
     NNMenus.h NNMenus.cpp
     NNStatusLine.h NNStatusLine.cpp
-    IEditorAPI.h
 
-    # Editor
-    NNEditor.h NNEditor.cpp
-    NNDocument.h NNDocument.cpp
-    NNWindow.h NNWindow.cpp
+    # Editor (remaining TUI classes not in nt_ui)
     NNEditorManager.h NNEditorManager.cpp
 
     # Lua language system
@@ -56,16 +71,11 @@ target_include_directories(nt
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/dialogs
-        ${CMAKE_SOURCE_DIR}/thirdparty/scintilla/include
-        ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/include
-        ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/access
 )
 
 target_link_libraries(nt
     PRIVATE
-        nt_core
-        tvision::tvision
-        lexilla
+        nt_ui
         lua
         uchardet
 )

@@ -524,8 +524,9 @@ void NNEditor::draw()
     setCursor(curPos.x - (int)delta.x, visRow);
 
     // Keep frame fold markers in sync with the current viewport.
-    if (owner && ((TWindow*)owner)->frame)
-        ((TWindow*)owner)->frame->drawView();
+    TWindow *win = dynamic_cast<TWindow*>(owner);
+    if (win && win->frame)
+        win->frame->drawView();
 }
 
 void NNEditor::handleEvent(TEvent &event)
