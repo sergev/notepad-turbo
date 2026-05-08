@@ -236,15 +236,20 @@ NNApplication::NNApplication(int argc, char **argv)
         openEditorWindow(argv[i]);
 
     // Restore session if enabled and no files were opened on command line
-    if (argc <= 1 && settings->getBool("Session.restore_previous", true))
+    if (argc <= 1 && settings->getBool("Editor.restore_previous", true))
         loadSession();
 }
 
 NNApplication::~NNApplication()
 {
+}
+
+void NNApplication::shutDown()
+{
     saveSession();
     recentFiles->save();
     settings->save();
+    TApplication::shutDown();
 }
 
 void NNApplication::initLua()
@@ -443,6 +448,8 @@ NNWindow *NNApplication::openEditorWindow(const std::string &path)
     if (!p)
         return nullptr;
 
+    win->onShutDown = [this, win]() { editorManager->untrackWindow(win); };
+    editorManager->trackWindow(win);
     deskTop->insert(p);
 
     NNEditor *ed = win->nnEditor();

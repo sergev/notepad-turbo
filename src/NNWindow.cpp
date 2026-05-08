@@ -143,3 +143,12 @@ void NNWindow::close()
     // TFileEditor::valid() handles the "save modified?" dialog via editorDialog
     TEditWindow::close();
 }
+
+void NNWindow::shutDown()
+{
+    if (onShutDown) {
+        onShutDown();
+        onShutDown = nullptr;
+    }
+    TEditWindow::shutDown();
+}

@@ -42,6 +42,7 @@ public:
 
     void handleEvent(TEvent &event) override;
     void idle() override;
+    void shutDown() override;
 
     TPalette &getPalette() const override;
 

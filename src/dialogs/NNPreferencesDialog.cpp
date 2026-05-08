@@ -107,7 +107,7 @@ void NNPreferencesDialog::run()
     data.checkboxes = 0;
     if (settings->getBool("Editor.use_tabs",   false)) data.checkboxes |= 0x01;
     if (settings->getBool("Editor.word_wrap",  false)) data.checkboxes |= 0x02;
-    if (settings->getBool("Session.restore_previous", true)) data.checkboxes |= 0x04;
+    if (settings->getBool("Editor.restore_previous", true)) data.checkboxes |= 0x04;
     if (settings->getBool("Editor.show_whitespace", false)) data.checkboxes |= 0x08;
     data.encodingSavePolicy = policyToIndex(FileEncoding::parseSavePolicy(
         settings->get("Editor.encoding_save_policy", FileEncoding::DefaultSavePolicyName)));
@@ -127,7 +127,7 @@ void NNPreferencesDialog::run()
     settings->setInt("Editor.tab_size",   atoi(data.tabWidth));
     settings->setBool("Editor.use_tabs",  (data.checkboxes & 0x01) != 0);
     settings->setBool("Editor.word_wrap", (data.checkboxes & 0x02) != 0);
-    settings->setBool("Session.restore_previous", (data.checkboxes & 0x04) != 0);
+    settings->setBool("Editor.restore_previous", (data.checkboxes & 0x04) != 0);
     settings->setBool("Editor.show_whitespace",   (data.checkboxes & 0x08) != 0);
     settings->set("Editor.encoding_save_policy",
                   FileEncoding::savePolicyName(indexToPolicy(data.encodingSavePolicy)));

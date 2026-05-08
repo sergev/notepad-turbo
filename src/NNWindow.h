@@ -17,6 +17,7 @@
 #define Uses_TEvent
 #include <tvision/tv.h>
 
+#include <functional>
 #include <string>
 
 class NNEditor;
@@ -29,12 +30,13 @@ public:
     void handleEvent(TEvent &event) override;
     const char *getTitle(short maxSize) override;
     void close() override;
+    void shutDown() override;
 
     NNEditor *nnEditor() const;
 
     static TFrame *initFrame(TRect r);
 
-    // Tracks modification state for title asterisk
+    std::function<void()> onShutDown;
     bool wasModified = false;
 
 private:
