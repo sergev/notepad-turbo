@@ -41,6 +41,20 @@ Install (after a successful build):
 make install
 ```
 
+## Testing
+
+```bash
+make test
+```
+
+This builds and runs three test suites via CTest:
+
+| Suite | What it covers |
+| --- | --- |
+| `unit_tests` | INI settings, sorter, session manager, recent files, macros, finder |
+| `ui_tests` | File encoding (uchardet/iconv round-trips), NNEditor, NNWindow, NNDocument |
+| `uchardet_tests` | Charset detection against 122 reference files (one `TEST()` per file) |
+
 ## Running
 
 Run the built binary (typical path `build/nt`):

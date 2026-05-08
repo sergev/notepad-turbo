@@ -11,7 +11,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 make              # Builds in RelWithDebInfo (output: build/nt)
 make debug        # Builds in Debug mode
-make test         # Runs unit tests via ctest
+make test         # Builds and runs all three test suites via ctest:
+                  #   unit_tests    — IniSettings, Sorter, Session, Macros, Finder
+                  #   ui_tests      — FileEncoding, NNEditor, NNWindow, NNDocument
+                  #   uchardet_tests — charset detection (122 GoogleTest cases)
 make install      # Installs binary + Lua scripts to /usr/local/
 make clean        # Removes build/ directory
 ./build/nt        # Run the editor
