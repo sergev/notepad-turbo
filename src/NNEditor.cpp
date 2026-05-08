@@ -251,6 +251,13 @@ void NNEditor::setEncodingSavePolicy(FileEncoding::SavePolicy policy) noexcept
 void NNEditor::setSourceEncoding(const std::string &charset) noexcept
 {
     sourceEncoding.charset = charset;
+    sourceEncoding.decoded = true;
+    if (charset == "UTF-16LE")
+        sourceEncoding.bom = FileEncoding::BomKind::Utf16Le;
+    else if (charset == "UTF-16BE")
+        sourceEncoding.bom = FileEncoding::BomKind::Utf16Be;
+    else
+        sourceEncoding.bom = FileEncoding::BomKind::None;
     modified = True;
 }
 

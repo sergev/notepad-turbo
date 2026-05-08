@@ -64,6 +64,8 @@ const char * const encodings[] = {
     "SHIFT_JIS",
     "TIS-620",
     "UHC",
+    "UTF-16BE",
+    "UTF-16LE",
     "UTF-8",
     "VISCII",
     "WINDOWS-1250",
