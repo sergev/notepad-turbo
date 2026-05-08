@@ -12,4 +12,3 @@ target_include_directories(uchardet PUBLIC
 )
 
 set(UCHARDET_LIBRARY uchardet)
-add_subdirectory(test)

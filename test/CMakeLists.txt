@@ -44,3 +44,11 @@ add_executable(ui_tests EXCLUDE_FROM_ALL ${UI_TEST_SOURCES})
 target_include_directories(ui_tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
 target_link_libraries(ui_tests PRIVATE gtest_main nt_ui)
 gtest_discover_tests(ui_tests EXTRA_ARGS --gtest_repeat=1 PROPERTIES TIMEOUT 30)
+
+add_executable(uchardet_tests EXCLUDE_FROM_ALL uchardet_test.cpp)
+target_include_directories(uchardet_tests PRIVATE ${CMAKE_SOURCE_DIR}/thirdparty/uchardet/src)
+target_compile_definitions(uchardet_tests PRIVATE
+    UCHARDET_TEST_DIR="${CMAKE_SOURCE_DIR}/thirdparty/uchardet/test"
+)
+target_link_libraries(uchardet_tests PRIVATE gtest_main uchardet)
+gtest_discover_tests(uchardet_tests EXTRA_ARGS --gtest_repeat=1 PROPERTIES TIMEOUT 30)
