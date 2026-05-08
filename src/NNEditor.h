@@ -107,6 +107,7 @@ private:
     int  visibleRowsBetween(int fromLine, int toLine) const noexcept;
     uint skipHiddenBackward(uint ptr) noexcept;
     uint visibleLineMove(uint ptr, int count) noexcept;
+    bool loadFileAsUtf8(TStringView fileName) noexcept;
     void runLexer();
     TColorAttr styleToAttr(uint8_t style) const noexcept;
 };

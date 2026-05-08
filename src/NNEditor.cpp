@@ -24,6 +24,7 @@
 #include "NNEditor.h"
 #include "NNDocument.h"
 #include "MacroRecorder.h"
+#include "FileEncoding.h"
 
 #include "Lexilla.h"
 #include "LexillaAccess.h"
@@ -36,6 +37,9 @@
 #include <cstring>
 #include <algorithm>
 #include <climits>
+#include <fstream>
+#include <new>
+#include <string>
 
 
 NNEditor::NNEditor(const TRect &bounds,
@@ -43,12 +47,15 @@ NNEditor::NNEditor(const TRect &bounds,
                    TScrollBar *vScrollBar,
                    TIndicator *indicator,
                    TStringView fileName) noexcept
-    : TFileEditor(bounds, hScrollBar, vScrollBar, indicator, fileName)
+    : TFileEditor(bounds, hScrollBar, vScrollBar, indicator, "")
     , document(std::make_unique<NNDocument>(this))
 {
     // Zero-initialize style map to default terminal colors
     for (auto &e : styleMap)
         e.attr = TColorAttr{};
+
+    if (!fileName.empty())
+        isValid = loadFileAsUtf8(fileName);
 }
 
 NNEditor::~NNEditor()
@@ -170,6 +177,64 @@ void NNEditor::invalidateStyles(int fromPos)
 {
     lexDirty = true;
     document->onBufferChanged(fromPos);
+}
+
+bool NNEditor::loadFileAsUtf8(TStringView requestedFileName) noexcept
+{
+    try {
+        strnzcpy(fileName, requestedFileName, sizeof(fileName));
+        fexpand(fileName);
+
+        std::ifstream file(fileName, std::ios::in | std::ios::binary);
+        if (!file) {
+            setBufLen(0);
+            invalidateStyles();
+            return true;
+        }
+
+        file.seekg(0, std::ios::end);
+        std::streampos end = file.tellg();
+        if (end < 0) {
+            editorDialog(edReadError, fileName);
+            return false;
+        }
+        file.seekg(0);
+
+        const auto fileSize = static_cast<unsigned long long>(end);
+        if (fileSize > UINT_MAX - 0x1Ful) {
+            editorDialog(edOutOfMemory);
+            return false;
+        }
+
+        std::string bytes;
+        bytes.resize(static_cast<size_t>(fileSize));
+        if (!bytes.empty())
+            file.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+        if (!file) {
+            editorDialog(edReadError, fileName);
+            return false;
+        }
+
+        std::string utf8 = FileEncoding::decodeToUtf8(bytes);
+        if (utf8.size() > UINT_MAX - 0x1Ful || setBufSize(static_cast<uint>(utf8.size())) == False) {
+            editorDialog(edOutOfMemory);
+            return false;
+        }
+
+        if (!utf8.empty())
+            memcpy(&buffer[bufSize - static_cast<uint>(utf8.size())],
+                   utf8.data(),
+                   utf8.size());
+        setBufLen(static_cast<uint>(utf8.size()));
+        invalidateStyles();
+        return true;
+    } catch (const std::bad_alloc &) {
+        editorDialog(edOutOfMemory);
+        return false;
+    } catch (...) {
+        editorDialog(edReadError, fileName);
+        return false;
+    }
 }
 
 // --- Text access ---

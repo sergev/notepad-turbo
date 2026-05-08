@@ -22,9 +22,12 @@ target_include_directories(nt_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # Depends on tvision::tvision and lexilla (no Lua).
 # Linked by both nt executable and ui_tests.
 #
+find_package(Iconv REQUIRED)
+
 add_library(nt_ui STATIC
     NNCommands.h
     IEditorAPI.h
+    FileEncoding.h  FileEncoding.cpp
     NNEditor.h      NNEditor.cpp
     NNDocument.h    NNDocument.cpp
     NNWindow.h      NNWindow.cpp
@@ -35,7 +38,7 @@ target_include_directories(nt_ui PUBLIC
     ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/include
     ${CMAKE_SOURCE_DIR}/thirdparty/lexilla/access
 )
-target_link_libraries(nt_ui PUBLIC nt_core tvision::tvision lexilla)
+target_link_libraries(nt_ui PUBLIC nt_core tvision::tvision lexilla PRIVATE uchardet Iconv::Iconv)
 
 add_executable(nt
     main.cpp
@@ -77,7 +80,6 @@ target_link_libraries(nt
     PRIVATE
         nt_ui
         lua
-        uchardet
 )
 
 target_compile_definitions(nt

@@ -83,18 +83,17 @@ TFrame *NNWindow::initFrame(TRect r)
 
 NNWindow::NNWindow(const TRect &bounds, TStringView fileName, int windowNum) noexcept
     : TWindowInit(&NNWindow::initFrame),
-      TEditWindow(bounds, fileName, windowNum)
+      TEditWindow(bounds, "", windowNum)
 {
-    // TEditWindow's constructor just created a plain TFileEditor.
-    // Replace it with an NNEditor that adds Lexilla syntax highlighting.
+    // TEditWindow's constructor just created a plain empty TFileEditor.
+    // Replace it with an NNEditor that loads UTF-8 content and adds highlighting.
 
     TScrollBar *h   = editor->hScrollBar;
     TScrollBar *v   = editor->vScrollBar;
     TIndicator *ind = editor->indicator;
     TRect r         = editor->getBounds();
     char fName[MAXPATH];
-    strncpy(fName, editor->fileName, MAXPATH - 1);
-    fName[MAXPATH - 1] = '\0';
+    strnzcpy(fName, fileName, sizeof(fName));
 
     // Remove and destroy the TFileEditor (leaves scrollbars and indicator intact)
     remove(editor);

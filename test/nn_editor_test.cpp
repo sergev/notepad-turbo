@@ -1,4 +1,32 @@
 #include "nn_test_helpers.h"
+#include "util.h"
+
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+namespace fs = std::filesystem;
+
+namespace {
+
+fs::path editorFilePath()
+{
+    return fs::temp_directory_path() / ("nt_editor_" + get_test_name() + ".txt");
+}
+
+void writeBinaryFile(const fs::path &path, const std::string &bytes)
+{
+    std::ofstream out(path, std::ios::out | std::ios::binary);
+    out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+}
+
+class NNEditorFileOpenTest : public ::testing::Test {
+protected:
+    void TearDown() override { fs::remove(path); }
+    fs::path path = editorFilePath();
+};
+
+} // namespace
 
 // Tests 1-5: NNEditor rendering, cursor movement, syntax highlighting, folding.
 
@@ -116,4 +144,68 @@ TEST(NNEditor, NavigationSkipsHiddenLines)
     int cy = (int)ctx.editor->curPos.y;
     EXPECT_TRUE(cy == 0 || cy >= 3)
         << "Cursor at line " << cy << " should not be inside collapsed fold";
+}
+
+TEST_F(NNEditorFileOpenTest, OpensUtf8FileUnchangedAndClean)
+{
+    const std::string expected = "alpha\ncaf\xC3\xA9\n";
+    writeBinaryFile(path, expected);
+
+    NNEditorTest ctx;
+    ctx.init(40, 5, path.string().c_str());
+
+    EXPECT_EQ(ctx.editor->flatText(), expected);
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, OpensWindows1252FileAsUtf8)
+{
+    const std::string bytes =
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n";
+    const std::string expected =
+        "Windows-1252 sample: \xE2\x80\x9Cquoted\xE2\x80\x9D \xE2\x80\x94 caf\xC3\xA9 \xE2\x82\xAC.\n"
+        "Windows-1252 sample: \xE2\x80\x9Cquoted\xE2\x80\x9D \xE2\x80\x94 caf\xC3\xA9 \xE2\x82\xAC.\n"
+        "Windows-1252 sample: \xE2\x80\x9Cquoted\xE2\x80\x9D \xE2\x80\x94 caf\xC3\xA9 \xE2\x82\xAC.\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(80, 8, path.string().c_str());
+
+    EXPECT_EQ(ctx.editor->flatText(), expected);
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, OpensUtf16LeBomFileAsUtf8)
+{
+    const char raw[] = {
+        static_cast<char>(0xFF), static_cast<char>(0xFE),
+        'h', 0, 'i', 0, ' ', 0,
+        static_cast<char>(0xE9), 0, '\n', 0,
+    };
+    const std::string bytes(raw, sizeof(raw));
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(40, 5, path.string().c_str());
+
+    EXPECT_EQ(ctx.editor->flatText(), "hi \xC3\xA9\n");
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, OpensInvalidEncodingBytesWithoutConversion)
+{
+    const char raw[] = {
+        static_cast<char>(0xFF), static_cast<char>(0xFE),
+        'h', 0, 'x',
+    };
+    const std::string bytes(raw, sizeof(raw));
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(40, 5, path.string().c_str());
+
+    EXPECT_EQ(ctx.editor->flatText(), bytes);
+    EXPECT_FALSE(ctx.editor->modified);
 }

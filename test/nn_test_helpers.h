@@ -93,11 +93,11 @@ struct NNEditorTest
     NNEditorTest(const NNEditorTest&) = delete;
     NNEditorTest& operator=(const NNEditorTest&) = delete;
 
-    void init(int w = 40, int h = 10)
+    void init(int w = 40, int h = 10, const char *fileName = "")
     {
         TRect bounds({0, 0}, {w, h});
         group  = new DrawableTestGroup({0, 0}, {w, h});
-        editor = new NNEditor(bounds, nullptr, nullptr, nullptr, "");
+        editor = new NNEditor(bounds, nullptr, nullptr, nullptr, fileName);
         group->insert(editor);
     }
 
