@@ -1,6 +1,7 @@
 #include "util.h"
 #include "IniSettings.h"
 
+#include <climits>
 #include <filesystem>
 #include <fstream>
 
@@ -137,6 +138,41 @@ TEST_F(IniSettingsTest, OverwriteExistingKey)
     ini.set("a.k", "first");
     ini.set("a.k", "second");
     EXPECT_EQ(ini.get("a.k"), "second");
+}
+
+TEST_F(IniSettingsTest, SaveAndLoadLowerState)
+{
+    {
+        IniSettings ini(path.string());
+        ini.set("S1.str", "");
+        ini.setInt("S1.num", 0);
+        ini.setBool("S1.flag", false);
+        ini.save();
+    }
+    IniSettings ini2(path.string());
+    ini2.load();
+    EXPECT_EQ(ini2.get("S1.str"), "");
+    EXPECT_EQ(ini2.getInt("S1.num"), 0);
+    EXPECT_FALSE(ini2.getBool("S1.flag"));
+    // Confirm stored zero/false are distinct from a truly absent key
+    EXPECT_EQ(ini2.getInt("S1.missing", 99), 99);
+    EXPECT_EQ(ini2.getBool("S1.missing", true), true);
+}
+
+TEST_F(IniSettingsTest, SaveAndLoadUpperState)
+{
+    {
+        IniSettings ini(path.string());
+        ini.set("S1.str", "Hello, World! Foo=Bar; Baz#Qux");
+        ini.setInt("S1.num", INT_MAX);
+        ini.setBool("S1.flag", true);
+        ini.save();
+    }
+    IniSettings ini2(path.string());
+    ini2.load();
+    EXPECT_EQ(ini2.get("S1.str"), "Hello, World! Foo=Bar; Baz#Qux");
+    EXPECT_EQ(ini2.getInt("S1.num"), INT_MAX);
+    EXPECT_TRUE(ini2.getBool("S1.flag"));
 }
 
 TEST_F(IniSettingsTest, LoadCommentLines)
