@@ -68,6 +68,7 @@ add_executable(nt
     dialogs/NNPreferencesDialog.h dialogs/NNPreferencesDialog.cpp
     dialogs/NNMacroRunDialog.h dialogs/NNMacroRunDialog.cpp
     dialogs/NNMacroSaveDialog.h dialogs/NNMacroSaveDialog.cpp
+    dialogs/NNEncodingDialog.h dialogs/NNEncodingDialog.cpp
 )
 
 target_include_directories(nt

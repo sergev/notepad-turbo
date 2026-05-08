@@ -64,6 +64,7 @@ public:
 
     // Preferences
     void showPreferences();
+    void showEncodingDialog();
 
     // About
     void showAbout();

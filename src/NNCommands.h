@@ -42,6 +42,7 @@ const int cmNNMacroSave    = 234;
 const int cmNNPreferences  = 240;
 const int cmNNAbout        = 241;
 const int cmNNSelectAll    = 242;
+const int cmNNEncoding     = 243;
 
 const int cmNNSortAsc      = 250;
 const int cmNNSortDesc     = 251;

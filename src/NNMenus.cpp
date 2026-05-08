@@ -66,6 +66,7 @@ TMenuBar *createNNMenuBar(TRect r)
 
     TSubMenu &toolsMenu = *new TSubMenu("~T~ools", kbAltT) +
         *new TMenuItem("~P~references...", cmNNPreferences, kbNoKey) +
+        *new TMenuItem("~E~ncoding...",    cmNNEncoding,    kbNoKey) +
         newLine() +
         *new TMenuItem("~R~ecord Macro",   cmNNMacroRecord, kbNoKey) +
         *new TMenuItem("~S~top Recording", cmNNMacroStop,   kbNoKey) +

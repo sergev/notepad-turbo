@@ -38,6 +38,7 @@
 #include "dialogs/NNFindReplaceDialog.h"
 #include "dialogs/NNGotoLineDialog.h"
 #include "dialogs/NNPreferencesDialog.h"
+#include "dialogs/NNEncodingDialog.h"
 
 #include <filesystem>
 #include <cstdlib>
@@ -579,6 +580,17 @@ void NNApplication::showPreferences()
     applyEncodingSavePolicy();
 }
 
+void NNApplication::showEncodingDialog()
+{
+    NNWindow *win = currentWindow();
+    if (!win) return;
+    NNEditor *ed = win->nnEditor();
+    NNEncodingDialog dlg(ed->getSourceEncoding().charset);
+    std::string chosen = dlg.run();
+    if (!chosen.empty())
+        ed->setSourceEncoding(chosen);
+}
+
 FileEncoding::SavePolicy NNApplication::encodingSavePolicyFromSettings() const
 {
     return FileEncoding::parseSavePolicy(
@@ -655,7 +667,8 @@ void NNApplication::handleEvent(TEvent &event)
             break;
         }
         case cmNNGotoLine: showGotoLine();        break;
-        case cmNNPreferences: showPreferences();  break;
+        case cmNNPreferences: showPreferences();     break;
+        case cmNNEncoding:    showEncodingDialog();  break;
         case cmNNAbout:    showAbout();           break;
         case cmNNFoldToggle: {
             NNWindow *win = currentWindow();

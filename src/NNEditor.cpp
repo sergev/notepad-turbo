@@ -248,6 +248,12 @@ void NNEditor::setEncodingSavePolicy(FileEncoding::SavePolicy policy) noexcept
     encodingSavePolicy = policy;
 }
 
+void NNEditor::setSourceEncoding(const std::string &charset) noexcept
+{
+    sourceEncoding.charset = charset;
+    modified = True;
+}
+
 Boolean NNEditor::saveEncoded() noexcept
 {
     if (*fileName == EOS)

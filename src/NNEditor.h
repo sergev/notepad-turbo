@@ -90,6 +90,7 @@ public:
     void setEncodingSavePolicy(FileEncoding::SavePolicy policy) noexcept;
     FileEncoding::SavePolicy getEncodingSavePolicy() const noexcept { return encodingSavePolicy; }
     const FileEncoding::SourceEncoding &getSourceEncoding() const noexcept { return sourceEncoding; }
+    void setSourceEncoding(const std::string &charset) noexcept;
 
     // Called by NNDocument when content changes
     void invalidateStyles(int fromPos = 0);
