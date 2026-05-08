@@ -1,13 +1,21 @@
 # Cursor Rules for nt
 
-Use `CLAUDE.md` as the primary deep-context memory for this repository.
+Use `CLAUDE.md` as the primary deep-context memory for this repository, then verify details against source and tests.
 
 Keep these rules as non-negotiable guardrails:
 
-2. Follow project style:
+1. Follow project style:
    - C++20, 4-space indentation, no tabs.
+   - Keep changes narrowly scoped and avoid unrelated refactors.
+2. Treat vendored dependencies conservatively:
+   - Prefer build configuration or existing upstream switches before patching vendored source.
+   - Check target visibility; use `PRIVATE` definitions unless consumers truly need them.
 3. Always add/update tests for behavior changes:
    - Unit-style tests for data/logic behavior.
+   - Keep documentation or build-only changes test-light, but still verify the affected path.
 4. Run relevant verification before finishing:
    - Build and targeted tests at minimum.
-5. When details are unclear, consult `CLAUDE.md` first, then source/tests as ground truth.
+   - Use `make` and `make test` for broad verification when build/test plumbing changes.
+5. Preserve user work:
+   - Do not revert or commit unrelated staged/unstaged changes unless explicitly asked.
+   - If a verification failure reveals unrelated broken tooling, fix the minimal cause when it blocks the requested verification.
