@@ -77,5 +77,12 @@ target_compile_definitions(lua
         LUA_CPATH_DEFAULT=""
 )
 
+if(UNIX)
+    target_compile_definitions(lua
+        PRIVATE
+            LUA_USE_POSIX
+    )
+endif()
+
 # Optional: Lua 5.3 compatibility (if you want)
 # target_compile_definitions(lua PRIVATE LUA_COMPAT_5_3)
