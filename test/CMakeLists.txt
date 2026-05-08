@@ -33,6 +33,7 @@ gtest_discover_tests(unit_tests EXTRA_ARGS --gtest_repeat=1 PROPERTIES TIMEOUT 1
 
 set(UI_TEST_SOURCES
     util.cpp
+    file_encoding_test.cpp
     nn_editor_test.cpp
     nn_window_test.cpp
     nn_document_test.cpp

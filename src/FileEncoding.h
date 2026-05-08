@@ -14,6 +14,46 @@
 
 namespace FileEncoding {
 
+enum class BomKind {
+    None,
+    Utf8,
+    Utf16Le,
+    Utf16Be,
+};
+
+enum class SavePolicy {
+    Fail,
+    Replace,
+    Utf8,
+};
+
+struct SourceEncoding {
+    std::string charset = "UTF-8";
+    BomKind bom = BomKind::None;
+    bool decoded = true;
+    std::string originalBytes;
+};
+
+struct DecodeResult {
+    std::string utf8;
+    SourceEncoding source;
+};
+
+struct EncodeResult {
+    bool ok = false;
+    std::string bytes;
+    SourceEncoding source;
+};
+
+constexpr const char *DefaultSavePolicyName = "replace";
+
+DecodeResult decode(const std::string &bytes);
 std::string decodeToUtf8(const std::string &bytes);
+EncodeResult encodeFromUtf8(const std::string &utf8,
+                            const SourceEncoding &source,
+                            SavePolicy policy);
+
+SavePolicy parseSavePolicy(const std::string &value);
+const char *savePolicyName(SavePolicy policy);
 
 }

@@ -21,6 +21,7 @@
 #include "ITextBuffer.h"
 #include "MacroStep.h"
 #include "ILexer.h"
+#include "FileEncoding.h"
 
 #include <array>
 #include <memory>
@@ -60,6 +61,7 @@ public:
     // --- TView overrides ---
     void draw() override;
     void handleEvent(TEvent &event) override;
+    Boolean valid(ushort command) override;
 
     // --- Text access (gap-buffer aware) / ITextBuffer ---
     std::string flatText() const override;
@@ -82,6 +84,13 @@ public:
     void setRecorder(MacroRecorder *rec) { recorder = rec; }
     void replayMacroStep(const NNMacroStep &step);
 
+    // --- Encoding-aware file operations ---
+    Boolean saveEncoded() noexcept;
+    Boolean saveAsEncoded() noexcept;
+    void setEncodingSavePolicy(FileEncoding::SavePolicy policy) noexcept;
+    FileEncoding::SavePolicy getEncodingSavePolicy() const noexcept { return encodingSavePolicy; }
+    const FileEncoding::SourceEncoding &getSourceEncoding() const noexcept { return sourceEncoding; }
+
     // Called by NNDocument when content changes
     void invalidateStyles(int fromPos = 0);
 
@@ -95,6 +104,8 @@ private:
     Scintilla::ILexer5 *lexer = nullptr;
     std::unique_ptr<NNDocument> document;
     MacroRecorder *recorder = nullptr;
+    FileEncoding::SourceEncoding sourceEncoding;
+    FileEncoding::SavePolicy encodingSavePolicy = FileEncoding::SavePolicy::Replace;
 
     std::array<StyleEntry, 256> styleMap{};
     std::set<int> collapsedLines;
@@ -108,6 +119,7 @@ private:
     uint skipHiddenBackward(uint ptr) noexcept;
     uint visibleLineMove(uint ptr, int count) noexcept;
     bool loadFileAsUtf8(TStringView fileName) noexcept;
+    Boolean saveFileEncoded() noexcept;
     void runLexer();
     TColorAttr styleToAttr(uint8_t style) const noexcept;
 };

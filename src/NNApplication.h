@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 
+namespace FileEncoding { enum class SavePolicy; }
+
 class IniSettings;
 class RecentFilesListManager;
 class NNEditorManager;
@@ -80,4 +82,6 @@ private:
     void loadSession();
     void saveSession();
     void initLua();
+    FileEncoding::SavePolicy encodingSavePolicyFromSettings() const;
+    void applyEncodingSavePolicy();
 };

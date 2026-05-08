@@ -29,6 +29,7 @@
 #include "NNWindow.h"
 #include "NNEditor.h"
 #include "NNEditorManager.h"
+#include "FileEncoding.h"
 #include "IniSettings.h"
 #include "RecentFilesListManager.h"
 #include "LuaState.h"
@@ -444,6 +445,7 @@ NNWindow *NNApplication::openEditorWindow(const std::string &path)
     deskTop->insert(p);
 
     NNEditor *ed = win->nnEditor();
+    ed->setEncodingSavePolicy(encodingSavePolicyFromSettings());
 
     // Enable file-related commands now that we have an editor
     TCommandSet ts;
@@ -510,14 +512,14 @@ void NNApplication::fileSave()
 {
     NNWindow *win = currentWindow();
     if (win)
-        win->nnEditor()->save();
+        win->nnEditor()->saveEncoded();
 }
 
 void NNApplication::fileSaveAs()
 {
     NNWindow *win = currentWindow();
     if (win)
-        win->nnEditor()->saveAs();
+        win->nnEditor()->saveAsEncoded();
 }
 
 void NNApplication::fileClose()
@@ -574,6 +576,20 @@ void NNApplication::showPreferences()
 {
     NNPreferencesDialog dlg(settings.get());
     dlg.run();
+    applyEncodingSavePolicy();
+}
+
+FileEncoding::SavePolicy NNApplication::encodingSavePolicyFromSettings() const
+{
+    return FileEncoding::parseSavePolicy(
+        settings->get("Editor.encoding_save_policy", FileEncoding::DefaultSavePolicyName));
+}
+
+void NNApplication::applyEncodingSavePolicy()
+{
+    FileEncoding::SavePolicy policy = encodingSavePolicyFromSettings();
+    for (NNWindow *win : editorManager->windows())
+        win->nnEditor()->setEncodingSavePolicy(policy);
 }
 
 // --- About ---

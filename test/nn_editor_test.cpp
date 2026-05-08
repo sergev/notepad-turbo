@@ -1,8 +1,10 @@
 #include "nn_test_helpers.h"
+#include "FileEncoding.h"
 #include "util.h"
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -18,6 +20,13 @@ void writeBinaryFile(const fs::path &path, const std::string &bytes)
 {
     std::ofstream out(path, std::ios::out | std::ios::binary);
     out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+}
+
+std::string readBinaryFile(const fs::path &path)
+{
+    std::ifstream in(path, std::ios::in | std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in),
+                       std::istreambuf_iterator<char>());
 }
 
 class NNEditorFileOpenTest : public ::testing::Test {
@@ -208,4 +217,105 @@ TEST_F(NNEditorFileOpenTest, OpensInvalidEncodingBytesWithoutConversion)
 
     EXPECT_EQ(ctx.editor->flatText(), bytes);
     EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, SavesWindows1252FileBackAsWindows1252)
+{
+    const std::string bytes =
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(80, 8, path.string().c_str());
+
+    ASSERT_TRUE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), bytes);
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, SavesUtf16LeBomFileBackAsUtf16Le)
+{
+    const char raw[] = {
+        static_cast<char>(0xFF), static_cast<char>(0xFE),
+        'h', 0, 'i', 0, '\n', 0,
+    };
+    const std::string bytes(raw, sizeof(raw));
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(40, 5, path.string().c_str());
+
+    ASSERT_TRUE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), bytes);
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, SavesUtf8BomFileWithBom)
+{
+    const std::string bytes = "\xEF\xBB\xBFhello\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(40, 5, path.string().c_str());
+
+    EXPECT_EQ(ctx.editor->flatText(), "hello\n");
+    ASSERT_TRUE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), bytes);
+}
+
+TEST_F(NNEditorFileOpenTest, ReplacePolicySavesReplacementAndClearsModified)
+{
+    const std::string bytes =
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(80, 8, path.string().c_str());
+    ctx.editor->setEncodingSavePolicy(FileEncoding::SavePolicy::Replace);
+    ctx.editor->replaceAll("snowman \xE2\x98\x83\n");
+
+    ASSERT_TRUE(ctx.editor->modified);
+    ASSERT_TRUE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), "snowman ?\n");
+    EXPECT_FALSE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, FailPolicyLeavesFileUnchangedAndModified)
+{
+    const std::string bytes =
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(80, 8, path.string().c_str());
+    ctx.editor->setEncodingSavePolicy(FileEncoding::SavePolicy::Fail);
+    ctx.editor->replaceAll("snowman \xE2\x98\x83\n");
+
+    ASSERT_FALSE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), bytes);
+    EXPECT_TRUE(ctx.editor->modified);
+}
+
+TEST_F(NNEditorFileOpenTest, Utf8PolicySwitchesFutureSavesToUtf8)
+{
+    const std::string bytes =
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n"
+        "Windows-1252 sample: \x93quoted\x94 \x97 caf\xE9 \x80.\n";
+    writeBinaryFile(path, bytes);
+
+    NNEditorTest ctx;
+    ctx.init(80, 8, path.string().c_str());
+    ctx.editor->setEncodingSavePolicy(FileEncoding::SavePolicy::Utf8);
+    ctx.editor->replaceAll("snowman \xE2\x98\x83\n");
+
+    ASSERT_TRUE(ctx.editor->saveEncoded());
+    EXPECT_EQ(readBinaryFile(path), "snowman \xE2\x98\x83\n");
+    EXPECT_EQ(ctx.editor->getSourceEncoding().charset, "UTF-8");
 }

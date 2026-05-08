@@ -13,6 +13,7 @@
 #define Uses_TInputLine
 #define Uses_TButton
 #define Uses_TCheckBoxes
+#define Uses_TRadioButtons
 #define Uses_TLabel
 #define Uses_TStaticText
 #define Uses_TSItem
@@ -23,10 +24,41 @@
 #include <tvision/tv.h>
 
 #include "NNPreferencesDialog.h"
+#include "FileEncoding.h"
 #include "IniSettings.h"
 
 #include <cstring>
 #include <cstdlib>
+
+namespace {
+
+ushort policyToIndex(FileEncoding::SavePolicy policy)
+{
+    switch (policy) {
+        case FileEncoding::SavePolicy::Fail:
+            return 0;
+        case FileEncoding::SavePolicy::Replace:
+            return 1;
+        case FileEncoding::SavePolicy::Utf8:
+            return 2;
+    }
+    return 1;
+}
+
+FileEncoding::SavePolicy indexToPolicy(ushort index)
+{
+    switch (index) {
+        case 0:
+            return FileEncoding::SavePolicy::Fail;
+        case 2:
+            return FileEncoding::SavePolicy::Utf8;
+        case 1:
+        default:
+            return FileEncoding::SavePolicy::Replace;
+    }
+}
+
+} // namespace
 
 NNPreferencesDialog::NNPreferencesDialog(IniSettings *settings)
     : settings(settings)
@@ -35,7 +67,7 @@ NNPreferencesDialog::NNPreferencesDialog(IniSettings *settings)
 
 void NNPreferencesDialog::run()
 {
-    TDialog *d = new TDialog(TRect(0, 0, 44, 18), "Preferences");
+    TDialog *d = new TDialog(TRect(0, 0, 54, 22), "Preferences");
     d->options |= ofCentered;
 
     // Tab size input
@@ -51,8 +83,14 @@ void NNPreferencesDialog::run()
         new TSItem("~S~how whitespace",
         nullptr))))));
 
-    d->insert(new TButton(TRect(8,  14, 19, 16), "O~K~",    cmOK,     bfDefault));
-    d->insert(new TButton(TRect(24, 14, 35, 16), "Cancel",  cmCancel, bfNormal));
+    d->insert(new TStaticText(TRect(2, 10, 50, 11), "When original encoding cannot represent text:"));
+    d->insert(new TRadioButtons(TRect(4, 11, 50, 15),
+        new TSItem("~F~ail save",
+        new TSItem("~R~eplace characters",
+        new TSItem("Save as ~U~TF-8", nullptr)))));
+
+    d->insert(new TButton(TRect(12, 18, 23, 20), "O~K~",    cmOK,     bfDefault));
+    d->insert(new TButton(TRect(30, 18, 41, 20), "Cancel",  cmCancel, bfNormal));
 
     d->selectNext(False);
 
@@ -60,6 +98,7 @@ void NNPreferencesDialog::run()
     struct PrefData {
         char tabWidth[5];
         ushort checkboxes;
+        ushort encodingSavePolicy;
     } data;
 
     snprintf(data.tabWidth, sizeof(data.tabWidth), "%d",
@@ -70,6 +109,8 @@ void NNPreferencesDialog::run()
     if (settings->getBool("Editor.word_wrap",  false)) data.checkboxes |= 0x02;
     if (settings->getBool("Session.restore_previous", true)) data.checkboxes |= 0x04;
     if (settings->getBool("Editor.show_whitespace", false)) data.checkboxes |= 0x08;
+    data.encodingSavePolicy = policyToIndex(FileEncoding::parseSavePolicy(
+        settings->get("Editor.encoding_save_policy", FileEncoding::DefaultSavePolicyName)));
 
     TView *p = TProgram::application->validView(d);
     if (!p) return;
@@ -88,4 +129,6 @@ void NNPreferencesDialog::run()
     settings->setBool("Editor.word_wrap", (data.checkboxes & 0x02) != 0);
     settings->setBool("Session.restore_previous", (data.checkboxes & 0x04) != 0);
     settings->setBool("Editor.show_whitespace",   (data.checkboxes & 0x08) != 0);
+    settings->set("Editor.encoding_save_policy",
+                  FileEncoding::savePolicyName(indexToPolicy(data.encodingSavePolicy)));
 }

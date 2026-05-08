@@ -37,9 +37,13 @@
 #include <cstring>
 #include <algorithm>
 #include <climits>
+#include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <new>
 #include <string>
+
+namespace fs = std::filesystem;
 
 
 NNEditor::NNEditor(const TRect &bounds,
@@ -215,7 +219,8 @@ bool NNEditor::loadFileAsUtf8(TStringView requestedFileName) noexcept
             return false;
         }
 
-        std::string utf8 = FileEncoding::decodeToUtf8(bytes);
+        FileEncoding::DecodeResult decoded = FileEncoding::decode(bytes);
+        std::string utf8 = decoded.utf8;
         if (utf8.size() > UINT_MAX - 0x1Ful || setBufSize(static_cast<uint>(utf8.size())) == False) {
             editorDialog(edOutOfMemory);
             return false;
@@ -226,6 +231,7 @@ bool NNEditor::loadFileAsUtf8(TStringView requestedFileName) noexcept
                    utf8.data(),
                    utf8.size());
         setBufLen(static_cast<uint>(utf8.size()));
+        sourceEncoding = decoded.source;
         invalidateStyles();
         return true;
     } catch (const std::bad_alloc &) {
@@ -235,6 +241,97 @@ bool NNEditor::loadFileAsUtf8(TStringView requestedFileName) noexcept
         editorDialog(edReadError, fileName);
         return false;
     }
+}
+
+void NNEditor::setEncodingSavePolicy(FileEncoding::SavePolicy policy) noexcept
+{
+    encodingSavePolicy = policy;
+}
+
+Boolean NNEditor::saveEncoded() noexcept
+{
+    if (*fileName == EOS)
+        return saveAsEncoded();
+    return saveFileEncoded();
+}
+
+Boolean NNEditor::saveAsEncoded() noexcept
+{
+    Boolean res = False;
+    if (editorDialog(edSaveAs, fileName) != cmCancel) {
+        fexpand(fileName);
+        message(owner, evBroadcast, cmUpdateTitle, 0);
+        res = saveFileEncoded();
+        if (isClipboard() == True)
+            *fileName = EOS;
+    }
+    return res;
+}
+
+Boolean NNEditor::saveFileEncoded() noexcept
+{
+    try {
+        FileEncoding::EncodeResult encoded =
+            FileEncoding::encodeFromUtf8(flatText(), sourceEncoding, encodingSavePolicy);
+        if (!encoded.ok) {
+            editorDialog(edWriteError, fileName);
+            return False;
+        }
+
+        if ((editorFlags & efBackupFiles) != 0 && *fileName != EOS) {
+            fs::path original(fileName);
+            fs::path backup = original;
+            backup.replace_extension(".bak");
+            std::error_code ec;
+            fs::remove(backup, ec);
+            ec.clear();
+            fs::rename(original, backup, ec);
+        }
+
+        std::ofstream file(fileName, std::ios::out | std::ios::binary);
+        if (!file) {
+            editorDialog(edCreateError, fileName);
+            return False;
+        }
+
+        if (!encoded.bytes.empty())
+            file.write(encoded.bytes.data(), static_cast<std::streamsize>(encoded.bytes.size()));
+        if (!file) {
+            editorDialog(edWriteError, fileName);
+            return False;
+        }
+
+        sourceEncoding = encoded.source;
+        modified = False;
+        update(ufUpdate);
+        return True;
+    } catch (const std::bad_alloc &) {
+        editorDialog(edOutOfMemory);
+        return False;
+    } catch (...) {
+        editorDialog(edWriteError, fileName);
+        return False;
+    }
+}
+
+Boolean NNEditor::valid(ushort command)
+{
+    if (command == cmValid)
+        return isValid;
+
+    if (modified == True) {
+        int dialog = (*fileName == EOS) ? edSaveUntitled : edSaveModify;
+        switch (editorDialog(dialog, fileName)) {
+            case cmYes:
+                return saveEncoded();
+            case cmNo:
+                modified = False;
+                return True;
+            case cmCancel:
+                return False;
+        }
+    }
+    return True;
 }
 
 // --- Text access ---
@@ -596,6 +693,21 @@ void NNEditor::draw()
 
 void NNEditor::handleEvent(TEvent &event)
 {
+    if (event.what == evCommand) {
+        switch (event.message.command) {
+            case cmSave:
+                saveEncoded();
+                clearEvent(event);
+                return;
+            case cmSaveAs:
+                saveAsEncoded();
+                clearEvent(event);
+                return;
+            default:
+                break;
+        }
+    }
+
     // TEditor::handleEvent unconditionally clears all keydown events, so fold
     // shortcuts must be intercepted here before the base class consumes them.
     if (event.what == evKeyDown && event.keyDown.keyCode == kbAltMinus) {
