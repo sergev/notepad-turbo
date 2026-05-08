@@ -118,6 +118,8 @@ nsProbingState nsHebrewProber::HandleData(const char* aBuf, PRUint32 aLen)
   for (curPtr = (char*)aBuf; curPtr < endPtr; ++curPtr)
   {
     cur = *curPtr;
+    if ((unsigned char)cur >= 0xC0 && (unsigned char)cur <= 0xD6)
+      mHasNikud = PR_TRUE;
     if (cur == ' ') // We stand on a space - a word just ended
     {
       if (mBeforePrev != ' ') // *(curPtr-2) was not a space so prev is not a 1 letter word
@@ -144,6 +146,13 @@ nsProbingState nsHebrewProber::HandleData(const char* aBuf, PRUint32 aLen)
 // Make the decision: is it Logical or Visual?
 const char* nsHebrewProber::GetCharSetName()
 {
+  // If no Windows-1255-specific nikud (vowel marks, 0xC0-0xD6) were found, the
+  // file uses only the basic Hebrew codepoints shared by ISO-8859-8 and
+  // windows-1255. Prefer ISO-8859-8 since the nikud that would definitively
+  // identify windows-1255 are absent.
+  if (!mHasNikud)
+    return VISUAL_HEBREW_NAME;
+
   // If the final letter score distance is dominant enough, rely on it.
   PRInt32 finalsub = mFinalCharLogicalScore - mFinalCharVisualScore;
   if (finalsub >= MIN_FINAL_CHAR_DISTANCE) 
@@ -176,6 +185,7 @@ void nsHebrewProber::Reset(void)
   // delimiter at the beginning of the data
   mPrev = ' ';
   mBeforePrev = ' ';
+  mHasNikud = PR_FALSE;
 }
 
 nsProbingState nsHebrewProber::GetState(void) 

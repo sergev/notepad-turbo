@@ -73,6 +73,8 @@ protected:
   // The two last characters seen in the previous buffer.
   char mPrev, mBeforePrev;
 
+  PRBool mHasNikud;  // true if Windows-1255-specific nikud bytes (0xC0-0xD6) seen
+
   // These probers are owned by the group prober.
   nsCharSetProber *mLogicalProb, *mVisualProb;
 };
