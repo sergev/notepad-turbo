@@ -39,6 +39,7 @@ The Makefile wraps CMake. Build artifacts go in `build/`. The compiler enforces 
 - `src/languages/*.lua` — 88 data-driven language files (keywords, file extensions, comment styles, colors)
 
 **Supporting subsystems**
+- `FileEncoding` — detects source encodings with uchardet/iconv, decodes file bytes to internal UTF-8, remembers source charset/BOM metadata, and re-encodes on save according to the global `Editor.encoding_save_policy`
 - `Finder` — search/replace (regex, case, whole-word, replace-all)
 - `MacroRecorder` / `MacroStep` / `Macro` / `MacroManager` — keystroke recording and replay
 - `IniSettings` — simple key=value / section.key INI settings store
@@ -51,6 +52,7 @@ The Makefile wraps CMake. Build artifacts go in `build/`. The compiler enforces 
 
 - `IEditorAPI` (`IEditorAPI.h`) — interface between the editor and Lexilla styler (colors, bold/italic, keywords, properties)
 - `Scintilla::IDocument` — implemented by `NNDocument` to let Lexilla read the gap buffer
+- `FileEncoding::DecodeResult` / `SourceEncoding` — carry decoded UTF-8 text plus original encoding metadata so `NNEditor` can save back to the original file encoding when possible
 
 ### Third-Party Dependencies
 

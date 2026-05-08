@@ -15,6 +15,7 @@ The application presents itself in-app as **Notepad Turbo** and is implemented a
 - **View**: word wrap, whitespace visibility.
 - **Tools**: preferences; record / stop / run / save macros.
 - **Syntax highlighting**: Lexilla lexers with styling driven from Lua (see [`src/NNEditor.h`](src/NNEditor.h), [`src/languages/*.lua`](src/languages)).
+- **Encoding support**: detects file encodings with uchardet, edits internally as UTF-8, and saves back to the original encoding when possible. Preferences control whether unrepresentable characters fail the save, are replaced, or force UTF-8 output.
 - **Persistence**: settings, recent files, and session restore (INI-style; see application code under [`src/`](src)).
 
 ## Requirements
